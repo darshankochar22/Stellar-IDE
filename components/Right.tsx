@@ -22,6 +22,8 @@ export default function Right() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [fontSize, setFontSize] = useState(14);
+  const [containerLoading, setContainerLoading] = useState(false);
+  const [userId, setUserId] = useState('1');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -196,6 +198,52 @@ export default function Right() {
     }
   }
 
+  async function handleCreateContainer() {
+    setContainerLoading(true);
+    try {
+      const response = await fetch('/api/docker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', userId })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        console.log('Container created:', data.message);
+        setUserId(String(parseInt(userId) + 1));
+      } else {
+        console.error('Error creating container:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to create container:', error);
+    } finally {
+      setContainerLoading(false);
+    }
+  }
+
+  async function handleDeleteContainer() {
+    setContainerLoading(true);
+    try {
+      const response = await fetch('/api/docker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', userId })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        console.log('Container deleted:', data.message);
+        setUserId(String(Math.max(1, parseInt(userId) - 1)));
+      } else {
+        console.error('Error deleting container:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to delete container:', error);
+    } finally {
+      setContainerLoading(false);
+    }
+  }
+
   function toggleFolder(path: string) {
     setExpandedFolders(prev => {
       const next = new Set(prev);
@@ -304,6 +352,20 @@ export default function Right() {
               {isSaving ? 'Saving...' : 'Save (⌘S)'}
             </button>
           )}
+          <button
+            onClick={handleCreateContainer}
+            disabled={containerLoading}
+            className="text-xs px-2 py-1 rounded bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white disabled:opacity-50 transition-colors"
+          >
+            {containerLoading ? 'Creating...' : '+ Container'}
+          </button>
+          <button
+            onClick={handleDeleteContainer}
+            disabled={containerLoading}
+            className="text-xs px-2 py-1 rounded bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white disabled:opacity-50 transition-colors"
+          >
+            {containerLoading ? 'Deleting...' : '- Container'}
+          </button>
         </div>
         <div className="text-xs text-gray-500 flex items-center gap-2">
           <span>Zoom: {fontSize}px</span>
