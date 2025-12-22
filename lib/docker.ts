@@ -34,9 +34,9 @@ export async function createAndInitializeContainer(userId: string) {
       // Container doesn't exist, continue
     }
 
-    // Run container with proper setup
+    // Run container - it already has workspace at /home/developer/workspace
     const { stdout: createOutput } = await execAsync(
-      `docker run -d --name ${containerName} stellar-sandbox:v2 tail -f /dev/null`
+      `docker run -d --name ${containerName} stellar-sandbox:v1 tail -f /dev/null`
     );
     console.log('Container created:', createOutput.trim());
 
@@ -52,12 +52,12 @@ export async function createAndInitializeContainer(userId: string) {
       throw new Error('Container failed to start properly');
     }
 
-    // Initialize Soroban contract
+    // Initialize Soroban contract in the workspace directory
     console.log(`Initializing contract in container: ${containerName}`);
     
     try {
       const { stdout: initOutput, stderr: initError } = await execAsync(
-        `docker exec ${containerName} sh -c "cd / && stellar contract init soroban-hello-world"`,
+        `docker exec -u developer ${containerName} sh -c "cd /home/developer/workspace && stellar contract init soroban-hello-world"`,
         { timeout: 30000 } // 30 second timeout
       );
       console.log('Contract initialized:', initOutput);
@@ -74,7 +74,7 @@ export async function createAndInitializeContainer(userId: string) {
 
     // Verify the directory was created
     const { stdout: verifyDir } = await execAsync(
-      `docker exec ${containerName} test -d /soroban-hello-world && echo "exists" || echo "missing"`
+      `docker exec ${containerName} test -d /home/developer/workspace/soroban-hello-world && echo "exists" || echo "missing"`
     );
     
     if (verifyDir.trim() !== 'exists') {
@@ -143,9 +143,25 @@ export async function getContainerFiles(userId: string) {
       throw new Error('Container is not running');
     }
 
-    // Get files from container - find all files recursively
+    // Get files from the workspace directory
+    const projectPath = '/home/developer/workspace/soroban-hello-world';
+    
+    // Check if project exists
+    const { stdout: projectExists } = await execAsync(
+      `docker exec ${containerName} test -d ${projectPath} && echo "exists" || echo "missing"`
+    );
+
+    if (projectExists.trim() !== 'exists') {
+      return { 
+        success: true, 
+        files: [],
+        message: 'Project not initialized yet. Click "Create Container" to initialize.'
+      };
+    }
+
+    // Get files from container - find all files recursively, exclude build artifacts
     const { stdout } = await execAsync(
-      `docker exec ${containerName} sh -c "find /soroban-hello-world -type f 2>/dev/null | grep -v '/target/' | grep -v '/.git/' || true"`,
+      `docker exec ${containerName} sh -c "find ${projectPath} -type f 2>/dev/null | grep -v '/target/' | grep -v '/.git/' | grep -v 'Cargo.lock' || true"`,
       { timeout: 10000 }
     );
 
@@ -153,7 +169,7 @@ export async function getContainerFiles(userId: string) {
       .trim()
       .split('\n')
       .filter(f => f.length > 0)
-      .map(f => f.replace(/^\/soroban-hello-world\//, ''))
+      .map(f => f.replace(`${projectPath}/`, ''))
       .filter(f => f.length > 0);
 
     console.log(`Found ${files.length} files`);
@@ -174,9 +190,11 @@ export async function getFileContent(userId: string, filePath: string) {
     const safePath = escapeFilePath(filePath);
     console.log(`Reading file: ${safePath} from container: ${containerName}`);
 
+    const fullPath = `/home/developer/workspace/soroban-hello-world/${safePath}`;
+
     // Verify file exists first
     const { stdout: fileExists } = await execAsync(
-      `docker exec ${containerName} test -f /soroban-hello-world/${safePath} && echo "exists" || echo "missing"`
+      `docker exec ${containerName} test -f ${fullPath} && echo "exists" || echo "missing"`
     );
 
     if (fileExists.trim() !== 'exists') {
@@ -185,7 +203,7 @@ export async function getFileContent(userId: string, filePath: string) {
 
     // Read file from container
     const { stdout } = await execAsync(
-      `docker exec ${containerName} cat /soroban-hello-world/${safePath}`,
+      `docker exec ${containerName} cat ${fullPath}`,
       { maxBuffer: 10 * 1024 * 1024 } // 10MB max file size
     );
 
@@ -206,18 +224,20 @@ export async function saveFileContent(userId: string, filePath: string, content:
     const safePath = escapeFilePath(filePath);
     console.log(`Saving file: ${safePath} to container: ${containerName}`);
 
+    const fullPath = `/home/developer/workspace/soroban-hello-world/${safePath}`;
+
     // Escape content for shell - use base64 encoding to avoid shell escaping issues
     const base64Content = Buffer.from(content).toString('base64');
 
     // Write file to container using base64 decoding
     await execAsync(
-      `docker exec ${containerName} sh -c "echo ${escapeShellArg(base64Content)} | base64 -d > /soroban-hello-world/${safePath}"`,
+      `docker exec -u developer ${containerName} sh -c "echo ${escapeShellArg(base64Content)} | base64 -d > ${fullPath}"`,
       { timeout: 10000 }
     );
 
     // Verify file was written
     const { stdout: verifySize } = await execAsync(
-      `docker exec ${containerName} wc -c < /soroban-hello-world/${safePath}`
+      `docker exec ${containerName} wc -c < ${fullPath}`
     );
 
     const writtenSize = parseInt(verifySize.trim());
@@ -234,6 +254,33 @@ export async function saveFileContent(userId: string, filePath: string, content:
     return {
       success: false,
       error: error.message || 'Failed to save file'
+    };
+  }
+}
+
+// Additional utility function to execute commands in the container
+export async function executeCommand(userId: string, command: string) {
+  try {
+    const containerName = `user${userId}`;
+    console.log(`Executing command in container ${containerName}: ${command}`);
+
+    const { stdout, stderr } = await execAsync(
+      `docker exec -u developer -w /home/developer/workspace/soroban-hello-world ${containerName} sh -c ${escapeShellArg(command)}`,
+      { timeout: 60000 } // 60 second timeout for builds
+    );
+
+    return {
+      success: true,
+      stdout,
+      stderr
+    };
+  } catch (error: any) {
+    console.error('Command execution error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to execute command',
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
     };
   }
 }
