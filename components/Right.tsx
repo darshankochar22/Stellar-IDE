@@ -761,14 +761,6 @@ export default function Right() {
       <div className="h-10 bg-[#171717] border-b border-[#252525] flex items-center justify-between px-3">
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-500">User: {userId}</span>
-          {openFile && (
-            <button
-              disabled={isSaving}
-              className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-600 text-white disabled:opacity-50 transition-colors"
-            >
-              {isSaving ? 'Saving...' : 'Save (⌘S)'}
-            </button>
-          )}
           <button
             onClick={handleCreateContainer}
             disabled={containerLoading}
