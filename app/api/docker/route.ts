@@ -4,7 +4,9 @@ import {
   deleteContainer,
   getContainerFiles,
   getFileContent,
-  saveFileContent
+  saveFileContent,
+  createFile,
+  createFolder
 } from '@/lib/docker';
 
 export async function POST(request: Request) {
@@ -32,6 +34,14 @@ export async function POST(request: Request) {
         const saveResult = await saveFileContent(userId, filePath, content);
         return NextResponse.json(saveResult);
 
+      case 'createFile':
+        const createFileResult = await createFile(userId, filePath);
+        return NextResponse.json(createFileResult);
+
+      case 'createFolder':
+        const createFolderResult = await createFolder(userId, filePath);
+        return NextResponse.json(createFolderResult);
+
       default:
         return NextResponse.json(
           { error: 'Unknown action' },
@@ -46,4 +56,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

@@ -284,3 +284,62 @@ export async function executeCommand(userId: string, command: string) {
     };
   }
 }
+
+export async function createFile(userId: string, filePath: string) {
+  try {
+    const containerName = `user${userId}`;
+    const safePath = escapeFilePath(filePath);
+    console.log(`Creating file: ${safePath} in container: ${containerName}`);
+
+    const fullPath = `/home/developer/workspace/soroban-hello-world/${safePath}`;
+
+    // Create parent directory if it doesn't exist
+    const dirPath = fullPath.substring(0, fullPath.lastIndexOf('/'));
+    if (dirPath) {
+      await execAsync(
+        `docker exec -u developer ${containerName} mkdir -p ${escapeShellArg(dirPath)}`,
+        { timeout: 5000 }
+      );
+    }
+
+    // Create empty file
+    await execAsync(
+      `docker exec -u developer ${containerName} touch ${escapeShellArg(fullPath)}`,
+      { timeout: 5000 }
+    );
+
+    console.log('File created successfully');
+    return { success: true, message: 'File created' };
+  } catch (error: any) {
+    console.error('Docker error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create file'
+    };
+  }
+}
+
+export async function createFolder(userId: string, folderPath: string) {
+  try {
+    const containerName = `user${userId}`;
+    const safePath = escapeFilePath(folderPath);
+    console.log(`Creating folder: ${safePath} in container: ${containerName}`);
+
+    const fullPath = `/home/developer/workspace/soroban-hello-world/${safePath}`;
+
+    // Create directory
+    await execAsync(
+      `docker exec -u developer ${containerName} mkdir -p ${escapeShellArg(fullPath)}`,
+      { timeout: 5000 }
+    );
+
+    console.log('Folder created successfully');
+    return { success: true, message: 'Folder created' };
+  } catch (error: any) {
+    console.error('Docker error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create folder'
+    };
+  }
+}

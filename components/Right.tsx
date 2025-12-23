@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
+import { FilePlus, FolderPlus, X } from 'lucide-react';
 
 type MonacoType = any;
 
@@ -13,6 +14,11 @@ type FileNode = {
   content?: string;
   children?: FileNode[];
 };
+
+type CreationState = {
+  parentPath: string;
+  type: 'file' | 'folder';
+} | null;
 
 export default function Right() {
   const [files, setFiles] = useState<FileNode[]>([]);
@@ -25,6 +31,8 @@ export default function Right() {
   const [containerLoading, setContainerLoading] = useState(false);
   const [userId] = useState('1');
   const [error, setError] = useState<string | null>(null);
+  const [creatingItem, setCreatingItem] = useState<CreationState>(null);
+  const [newItemName, setNewItemName] = useState('');
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -246,6 +254,76 @@ export default function Right() {
     }
   }
 
+  async function handleCreateFile(parentPath: string = '') {
+    setCreatingItem({ parentPath, type: 'file' });
+    setNewItemName('');
+  }
+
+  async function handleCreateFolder(parentPath: string = '') {
+    setCreatingItem({ parentPath, type: 'folder' });
+    setNewItemName('');
+  }
+
+  async function confirmCreateItem() {
+    if (!creatingItem || !newItemName.trim()) {
+      setCreatingItem(null);
+      return;
+    }
+
+    const fileName = newItemName.trim();
+    const fullPath = creatingItem.parentPath 
+      ? `${creatingItem.parentPath}/${fileName}`
+      : fileName;
+
+    try {
+      const response = await fetch('/api/docker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: creatingItem.type === 'file' ? 'createFile' : 'createFolder',
+          userId, 
+          filePath: fullPath
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Reload file tree
+        await loadFiles();
+        
+        // If it's a file, open it
+        if (creatingItem.type === 'file') {
+          const newFile: FileNode = {
+            name: fileName,
+            type: 'file',
+            path: fullPath
+          };
+          setFileContents(prev => new Map(prev).set(fullPath, ''));
+          setOpenFile(newFile);
+        } else {
+          // Expand the new folder
+          setExpandedFolders(prev => new Set(prev).add(fullPath));
+        }
+        
+        setCreatingItem(null);
+        setNewItemName('');
+      } else {
+        setError(`Failed to create ${creatingItem.type}: ${data.error}`);
+        setCreatingItem(null);
+      }
+    } catch (error) {
+      console.error(`Failed to create ${creatingItem.type}:`, error);
+      setError(`Failed to create ${creatingItem.type}`);
+      setCreatingItem(null);
+    }
+  }
+
+  function cancelCreateItem() {
+    setCreatingItem(null);
+    setNewItemName('');
+  }
+
   async function handleCreateContainer() {
     setContainerLoading(true);
     setError(null);
@@ -405,34 +483,136 @@ export default function Right() {
     return languageMap[ext || ''] || 'plaintext';
   }
 
-  function renderFileTree(nodes: FileNode[], depth = 0) {
-    return nodes.map(node => (
-      <div key={node.path}>
-        <div
-          className={`flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-[#252525] ${
-            openFile?.path === node.path ? 'bg-[#252525]' : ''
-          }`}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
-          onClick={() => {
-            if (node.type === 'folder') {
-              toggleFolder(node.path);
-            } else {
-              handleFileClick(node);
-            }
-          }}
-        >
-          {node.type === 'folder' && (
+  function renderFileTree(nodes: FileNode[], depth = 0, parentPath = '') {
+    return (
+      <>
+        {nodes.map(node => (
+          <div key={node.path}>
+            <div
+              className={`flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-[#252525] group ${
+                openFile?.path === node.path ? 'bg-[#252525]' : ''
+              }`}
+              style={{ paddingLeft: `${depth * 16 + 8}px` }}
+              onClick={() => {
+                if (node.type === 'folder') {
+                  toggleFolder(node.path);
+                } else {
+                  handleFileClick(node);
+                }
+              }}
+            >
+              {node.type === 'folder' && (
+                <span className="text-gray-400 text-xs">
+                  {expandedFolders.has(node.path) ? '▼' : '▶'}
+                </span>
+              )}
+              <span className="text-gray-300 text-sm flex-1">{node.name}</span>
+              
+              {/* Create buttons on hover for folders */}
+              {node.type === 'folder' && (
+                <div className="hidden group-hover:flex items-center gap-1">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCreateFile(node.path);
+                    }}
+                    className="p-1 hover:bg-[#333] rounded transition-colors"
+                    title="New File"
+                  >
+                    <FilePlus className="w-3 h-3 text-gray-400" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCreateFolder(node.path);
+                    }}
+                    className="p-1 hover:bg-[#333] rounded transition-colors"
+                    title="New Folder"
+                  >
+                    <FolderPlus className="w-3 h-3 text-gray-400" />
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Show input for creating new item in this folder */}
+            {node.type === 'folder' && 
+             creatingItem && 
+             creatingItem.parentPath === node.path && 
+             expandedFolders.has(node.path) && (
+              <div 
+                className="flex items-center gap-2 px-2 py-1 bg-[#1e1e1e]"
+                style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}
+              >
+                <span className="text-gray-400 text-xs">
+                  {creatingItem.type === 'file' ? '📄' : '📁'}
+                </span>
+                <input
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      confirmCreateItem();
+                    } else if (e.key === 'Escape') {
+                      cancelCreateItem();
+                    }
+                  }}
+                  onBlur={confirmCreateItem}
+                  autoFocus
+                  placeholder={creatingItem.type === 'file' ? 'filename.rs' : 'foldername'}
+                  className="flex-1 bg-[#252525] text-white text-sm px-2 py-0.5 rounded outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <button
+                  onClick={cancelCreateItem}
+                  className="p-1 hover:bg-[#333] rounded transition-colors"
+                >
+                  <X className="w-3 h-3 text-gray-400" />
+                </button>
+              </div>
+            )}
+            
+            {node.type === 'folder' && expandedFolders.has(node.path) && node.children && (
+              <div>{renderFileTree(node.children, depth + 1, node.path)}</div>
+            )}
+          </div>
+        ))}
+        
+        {/* Show input at root level if creating in root */}
+        {depth === 0 && creatingItem && creatingItem.parentPath === parentPath && (
+          <div 
+            className="flex items-center gap-2 px-2 py-1 bg-[#1e1e1e]"
+            style={{ paddingLeft: '8px' }}
+          >
             <span className="text-gray-400 text-xs">
-              {expandedFolders.has(node.path) ? '▼' : '▶'}
+              {creatingItem.type === 'file' ? '📄' : '📁'}
             </span>
-          )}
-          <span className="text-gray-300 text-sm">{node.name}</span>
-        </div>
-        {node.type === 'folder' && expandedFolders.has(node.path) && node.children && (
-          <div>{renderFileTree(node.children, depth + 1)}</div>
+            <input
+              type="text"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  confirmCreateItem();
+                } else if (e.key === 'Escape') {
+                  cancelCreateItem();
+                }
+              }}
+              onBlur={confirmCreateItem}
+              autoFocus
+              placeholder={creatingItem.type === 'file' ? 'filename.rs' : 'foldername'}
+              className="flex-1 bg-[#252525] text-white text-sm px-2 py-0.5 rounded outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <button
+              onClick={cancelCreateItem}
+              className="p-1 hover:bg-[#333] rounded transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-400" />
+            </button>
+          </div>
         )}
-      </div>
-    ));
+      </>
+    );
   }
 
   // Keyboard shortcuts
@@ -528,7 +708,30 @@ export default function Right() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <div className="w-64 bg-[#171717] border-r border-[#252525] overflow-y-auto flex flex-col">
-          <div className="py-2">
+          {/* Sidebar Header with Create Buttons */}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-[#252525]">
+            <span className="text-xs text-gray-400 font-semibold uppercase">Explorer</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleCreateFile('')}
+                className="p-1 hover:bg-[#252525] rounded transition-colors"
+                title="New File"
+                disabled={files.length === 0}
+              >
+                <FilePlus className="w-4 h-4 text-gray-400" />
+              </button>
+              <button
+                onClick={() => handleCreateFolder('')}
+                className="p-1 hover:bg-[#252525] rounded transition-colors"
+                title="New Folder"
+                disabled={files.length === 0}
+              >
+                <FolderPlus className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="py-2 flex-1 overflow-y-auto">
             {isLoading ? (
               <div className="px-4 py-2 text-gray-500 text-sm">Loading files...</div>
             ) : files.length === 0 ? (
