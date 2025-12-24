@@ -154,7 +154,7 @@ export default function Right() {
   };
 
   // Load file tree from Docker container
-  async function loadFiles() {
+  async function loadFiles(preserveExpanded = true) {
     setIsLoading(true);
     setError(null);
     try {
@@ -169,9 +169,11 @@ export default function Right() {
         const tree = buildFileTree(data.files);
         setFiles(tree);
         
-        // Auto-expand common folders
-        const commonFolders = ['src', 'contracts'];
-        setExpandedFolders(new Set(commonFolders));
+        // Preserve expanded folders if refreshing, otherwise auto-expand common folders
+        if (!preserveExpanded) {
+          const commonFolders = ['src', 'contracts', 'soroban-hello-world'];
+          setExpandedFolders(new Set(commonFolders));
+        }
       } else {
         setError(data.error || 'Failed to load files');
         setFiles([]);
@@ -187,7 +189,16 @@ export default function Right() {
 
   // Load files on mount and when userId changes
   useEffect(() => {
-    loadFiles();
+    loadFiles(false); // false = don't preserve expanded, use default expand
+  }, [userId]);
+
+  // Auto-refresh file tree every 2 seconds to detect new files/folders
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadFiles(true); // true = preserve expanded folders
+    }, 2000); // Refresh every 2 seconds
+
+    return () => clearInterval(intervalId);
   }, [userId]);
 
   // Remove Monaco blue borders
@@ -917,7 +928,7 @@ export default function Right() {
             {containerLoading ? 'Loading...' : 'Delete Container'}
           </button>
           <button
-            onClick={loadFiles}
+            onClick={() => loadFiles(true)}
             disabled={isLoading}
             className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-800 text-white disabled:opacity-50 transition-colors"
           >
