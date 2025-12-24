@@ -40,6 +40,8 @@ export default function Right() {
   const accumulatedDeltaRef = useRef(0);
   const [connected, setConnected] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+  
 
   // Check if Freighter wallet is available
   const isFreighterAvailable = () => {
@@ -60,7 +62,7 @@ export default function Right() {
 
         const alreadyConnected = await isConnected();
         if (alreadyConnected) {
-          const key = await getPublicKey();
+          const key = await getAddress();
           setConnected(true);
           setPublicKey(key);
           console.log('Already connected to wallet:', key);
@@ -88,7 +90,6 @@ export default function Right() {
         window.open('https://www.freighter.app/', '_blank');
         return;
       }
-  
       // 3. Use setAllowed() to request access (replaces getPublicKey for connection)
       // This is the standard function to trigger the "Allow List" popup
       const access = await setAllowed();
@@ -539,6 +540,31 @@ export default function Right() {
     }
   }
 
+  async function handleCreateAccount() {
+    setAccountLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/docker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'createAccount', userId })
+      });
+      const data = await response.json();
+      if (data.success) {
+        console.log('Account created:', data.message);
+       // await loadFiles();
+      } else {
+        setError(`Failed to create account: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to create account:', error);
+      setError('Failed to create account');
+    } finally {
+      setAccountLoading(false);
+    }
+  }
+
   function toggleFolder(path: string) {
     setExpandedFolders(prev => {
       const next = new Set(prev);
@@ -826,12 +852,12 @@ export default function Right() {
           
           {connected ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-green-400">
+              <span className="text-xs text-white">
                 {publicKey?.slice(0, 4)}...{publicKey?.slice(-4)}
               </span>
               <button
                 onClick={disconnectWallet}
-                className="text-xs px-3 py-1 rounded bg-red-900/30 hover:bg-red-900/50 text-white transition-colors"
+                className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] text-white transition-colors"
               >
                 Disconnect
               </button>
@@ -839,7 +865,7 @@ export default function Right() {
           ) : (
             <button
               onClick={connectWallet}
-              className="text-xs px-3 py-1 rounded bg-blue-900/30 hover:bg-blue-900/50 text-white transition-colors"
+              className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] text-white transition-colors"
             >
               Connect Wallet
             </button>
@@ -867,10 +893,11 @@ export default function Right() {
             {isLoading ? 'Loading...' : 'Refresh'}
           </button>
           <button
-            disabled={isLoading}
+            onClick={handleCreateAccount}
+            disabled={accountLoading}
             className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-800 text-white disabled:opacity-50 transition-colors"
           >
-            {isLoading ? 'Deploying...' : 'Deploy'}
+            {accountLoading ? 'Loading....' : 'Create Account'}
           </button>
         </div>
         <div className="text-xs text-gray-500 flex items-center gap-2">

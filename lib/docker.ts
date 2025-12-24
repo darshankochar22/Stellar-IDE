@@ -129,6 +129,62 @@ export async function deleteContainer(userId: string) {
   }
 }
 
+export async function generateKeys(userId: string) {
+  try {
+    const containerName = `user${userId}`;
+    console.log(`Deploying contract in container: ${containerName}`);
+
+    const {stdout, stderr} = await execAsync(
+      `docker  exec -u developer ${containerName} sh -c "stellar keys generate darshan --network testnet--fund "`
+    );
+    console.log('Key generated:', stdout);
+    if (stderr) {
+      console.error('Key generation error:', stderr);
+    }
+    return {
+      success: true,
+      stdout,
+      stderr
+    };
+  } catch (error: any) {
+    console.error('Docker error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to deploy contract',
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
+    };
+  }
+}
+
+export async function createAccount(userId: string) {
+  try {
+    const containerName = `user${userId}`;
+    console.log(`Creating account in container: ${containerName}`);
+    
+    const {stdout, stderr} = await execAsync(
+      `docker exec -u developer ${containerName} sh -c "stellar keys generate darshan--network testnet --fund"`,
+    )
+    console.log('Account created:', stdout);
+    if (stderr) {
+      console.error('Account creation error:', stderr);
+    }
+    return {
+      success: true,
+      stdout,
+      stderr
+    };
+  } catch (error: any) {
+    console.error('Docker error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create account',
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
+    };
+  }
+}
+
 export async function getContainerFiles(userId: string) {
   try {
     const containerName = `user${userId}`;
@@ -387,29 +443,3 @@ export async function deleteFolder(userId: string, folderPath: string) {
     };
   }
 } 
-
-
-export async function deployContract(userId: string) {
-  try {
-    const containerName = `user${userId}`;
-    console.log(`Deploying contract in container: ${containerName}`);
-
-    const { stdout, stderr } = await execAsync(
-      `docker exec -u developer ${containerName} sh -c "stellar contract build && stellar contract deploy"`,
-      { timeout: 60000 }
-    );
-    return {
-      success: true,
-      stdout,
-      stderr
-    };
-  } catch (error: any) {
-    console.error('Docker error:', error);
-    return {
-      success: false,
-      error: error.message || 'Failed to deploy contract',
-      stdout: error.stdout || '',
-      stderr: error.stderr || ''
-    };
-  }
-}
