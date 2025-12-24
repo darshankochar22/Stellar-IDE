@@ -41,8 +41,34 @@ export default function Right() {
   const [connected, setConnected] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
+  const [contractLoading, setContractLoading] = useState(false);
   
 
+
+  const handleDeployContract = async () => {
+    setContractLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/docker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deployContract', userId })
+      });
+      const data = await response.json();
+      if (data.success) {
+        console.log('Contract deployed:', data.message);
+       // await loadFiles();
+      } else {
+        setError(`Failed to deploy contract: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to deploy contract:', error);
+      setError('Failed to deploy contract');
+    } finally {
+      setContractLoading(false);
+    }
+  }
   // Check if Freighter wallet is available
   const isFreighterAvailable = () => {
     if (typeof window === 'undefined') return false;
@@ -898,6 +924,13 @@ export default function Right() {
             className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-800 text-white disabled:opacity-50 transition-colors"
           >
             {accountLoading ? 'Loading....' : 'Create Account'}
+          </button>
+          <button
+            onClick={handleDeployContract}
+            disabled={contractLoading}
+            className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-800 text-white disabled:opacity-50 transition-colors"
+          >
+            {contractLoading ? 'Loading....' : 'Deploy Contract'}
           </button>
         </div>
         <div className="text-xs text-gray-500 flex items-center gap-2">

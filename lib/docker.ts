@@ -185,6 +185,39 @@ export async function createAccount(userId: string) {
   }
 }
 
+export async function deployContract(userId: string){
+  try {
+    const containerName = `user${userId}`;
+    console.log(`Deploying contract in container: ${containerName}`);
+    
+    const {stdout, stderr} = await execAsync(
+      `docker exec -u developer ${containerName} sh -c "stellar contract deploy \
+               --wasm target/wasm32v1-none/release/hello_world.wasm \
+               --source-account darshan \
+               --network testnet \
+               --alias hello_world"`
+    )
+    console.log('Contract deployed:', stdout);
+    if (stderr) {
+      console.error('Contract deployment error:', stderr);
+    }
+    return {
+      success: true,
+      stdout,
+      stderr
+    };
+  } catch (error: any) {
+    console.error('Docker error:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to deploy contract',
+      stdout: error.stdout || '',
+      stderr: error.stderr || ''
+    };
+  }
+}
+
+
 export async function getContainerFiles(userId: string) {
   try {
     const containerName = `user${userId}`;

@@ -9,7 +9,8 @@ import {
   createFolder,
   deleteFile,
   deleteFolder,
-  createAccount
+  createAccount,
+  deployContract
 } from '@/lib/docker';
 
 export async function POST(request: Request) {
@@ -56,6 +57,10 @@ export async function POST(request: Request) {
       case 'createAccount':
         const createAccountResult = await createAccount(userId);
         return NextResponse.json(createAccountResult);
+
+      case 'deployContract':
+        const deployContractResult = await deployContract(userId);
+        return NextResponse.json(deployContractResult);
 
       default:
         return NextResponse.json(
