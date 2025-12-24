@@ -261,7 +261,7 @@ export async function getContainerFiles(userId: string) {
 
     // Get files from container - find all files recursively, exclude build artifacts
     const { stdout } = await execAsync(
-      `docker exec ${containerName} sh -c "find ${projectPath} -type f 2>/dev/null | grep -v '/target/' | grep -v '/.git/' | grep -v 'Cargo.lock' || true"`,
+      `docker exec ${containerName} sh -c "find ${projectPath} -type f -not -path '*/target/*' -not -path '*/.git/*' -not -name 'Cargo.lock' 2>/dev/null || true"`,
       { timeout: 10000 }
     );
 

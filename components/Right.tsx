@@ -192,14 +192,6 @@ export default function Right() {
     loadFiles(false); // false = don't preserve expanded, use default expand
   }, [userId]);
 
-  // Auto-refresh file tree every 2 seconds to detect new files/folders
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      loadFiles(true); // true = preserve expanded folders
-    }, 2000); // Refresh every 2 seconds
-
-    return () => clearInterval(intervalId);
-  }, [userId]);
 
   // Remove Monaco blue borders
   useEffect(() => {
