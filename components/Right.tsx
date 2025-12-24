@@ -875,7 +875,7 @@ export default function Right() {
   }, [fontSize, openFile, fileContents]);
 
   return (
-    <div className="flex flex-col h-screen bg-[#171717]">
+    <div className="flex flex-col h-full bg-[#171717] overflow-hidden">
       {/* Top bar */}
       <div className="h-10 bg-[#171717] border-b border-[#252525] flex items-center justify-between px-3">
         <div className="flex items-center gap-3">

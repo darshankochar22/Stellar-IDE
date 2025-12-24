@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Wrench, Activity, ThumbsUp, ThumbsDown, Copy, MoreHorizontal, Send } from 'lucide-react';
+import { Wrench, Activity, ThumbsUp, ThumbsDown, Copy, MoreHorizontal } from 'lucide-react';
 
 const LeftComponent = () => {
   const [messages, setMessages] = useState([
@@ -33,7 +33,7 @@ const LeftComponent = () => {
     }
   };
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -41,7 +41,7 @@ const LeftComponent = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen text-white bg-black relative">
+    <div className="flex flex-col h-full text-white bg-black relative overflow-hidden">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32 w-full">
         {messages.map((message) => (
