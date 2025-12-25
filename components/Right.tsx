@@ -3,8 +3,9 @@
 import { useRef, useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import { FilePlus, FolderPlus, X, Trash2 } from 'lucide-react';
+import { FilePlus, FolderPlus, X, Trash2, Terminal as TerminalIcon } from 'lucide-react';
 import { isConnected, setAllowed, getAddress } from "@stellar/freighter-api";
+import Terminal, { type LogMessage } from './Terminal';
 
 type MonacoType = any;
 
@@ -42,8 +43,62 @@ export default function Right() {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
   const [contractLoading, setContractLoading] = useState(false);
-  
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [logs, setLogs] = useState<LogMessage[]>([]);
+  const [messageCount, setMessageCount] = useState(0);
+  const [terminalHeight, setTerminalHeight] = useState(250);
 
+  // Intercept console methods
+  useEffect(() => {
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const originalInfo = console.info;
+
+    const addLog = (message: any, type: 'log' | 'error' | 'warn' | 'info') => {
+      const now = new Date();
+      const timestamp = now.toLocaleTimeString();
+      const formattedMessage = 
+        typeof message === 'string' 
+          ? message 
+          : JSON.stringify(message, null, 2);
+
+      setLogs(prev => [...prev, {
+        id: messageCount,
+        message: formattedMessage,
+        timestamp,
+        type
+      }]);
+      setMessageCount(prev => prev + 1);
+    };
+
+    console.log = (...args) => {
+      addLog(args.length === 1 ? args[0] : args.join(' '), 'log');
+      originalLog.apply(console, args);
+    };
+
+    console.error = (...args) => {
+      addLog(args.length === 1 ? args[0] : args.join(' '), 'error');
+      originalError.apply(console, args);
+    };
+
+    console.warn = (...args) => {
+      addLog(args.length === 1 ? args[0] : args.join(' '), 'warn');
+      originalWarn.apply(console, args);
+    };
+
+    console.info = (...args) => {
+      addLog(args.length === 1 ? args[0] : args.join(' '), 'info');
+      originalInfo.apply(console, args);
+    };
+
+    return () => {
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+      console.info = originalInfo;
+    };
+  }, [messageCount]);
 
   const handleDeployContract = async () => {
     setContractLoading(true);
@@ -163,7 +218,7 @@ export default function Right() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'getFiles', userId })
       });
-      const data = await response.json();
+        const data = await response.json();
       
       if (data.success && data.files) {
         const tree = buildFileTree(data.files);
@@ -178,14 +233,14 @@ export default function Right() {
         setError(data.error || 'Failed to load files');
         setFiles([]);
       }
-    } catch (error) {
-      console.error('Failed to load files:', error);
+      } catch (error) {
+        console.error('Failed to load files:', error);
       setError('Failed to connect to server');
       setFiles([]);
-    } finally {
-      setIsLoading(false);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }
 
   // Load files on mount and when userId changes
   useEffect(() => {
@@ -255,7 +310,7 @@ export default function Right() {
             const newFontSize = Math.max(8, Math.min(40, currentFontSize - zoomDelta));
             if (newFontSize !== currentFontSize) {
               setFontSize(newFontSize);
-              editor.updateOptions({ fontSize: newFontSize });
+          editor.updateOptions({ fontSize: newFontSize });
             }
           }
 
@@ -323,8 +378,8 @@ export default function Right() {
         const data = await response.json();
         
         if (data.success) {
-          setFileContents(prev => new Map(prev).set(file.path, data.content));
-          setOpenFile(file);
+        setFileContents(prev => new Map(prev).set(file.path, data.content));
+        setOpenFile(file);
           setError(null);
         } else {
           setError(`Failed to load ${file.name}: ${data.error}`);
@@ -347,11 +402,11 @@ export default function Right() {
       const response = await fetch('/api/docker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           action: 'saveFileContent', 
           userId, 
           filePath: openFile.path, 
-          content 
+          content
         })
       });
 
@@ -697,25 +752,25 @@ export default function Right() {
     return (
       <>
         {nodes.map(node => (
-          <div key={node.path}>
-            <div
+      <div key={node.path}>
+        <div
               className={`flex items-center gap-2 px-2 py-1 cursor-pointer hover:bg-[#252525] group ${
-                openFile?.path === node.path ? 'bg-[#252525]' : ''
-              }`}
-              style={{ paddingLeft: `${depth * 16 + 8}px` }}
-              onClick={() => {
-                if (node.type === 'folder') {
-                  toggleFolder(node.path);
-                } else {
-                  handleFileClick(node);
-                }
-              }}
-            >
-              {node.type === 'folder' && (
-                <span className="text-gray-400 text-xs">
-                  {expandedFolders.has(node.path) ? '▼' : '▶'}
-                </span>
-              )}
+            openFile?.path === node.path ? 'bg-[#252525]' : ''
+          }`}
+          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          onClick={() => {
+            if (node.type === 'folder') {
+              toggleFolder(node.path);
+            } else {
+              handleFileClick(node);
+            }
+          }}
+        >
+          {node.type === 'folder' && (
+            <span className="text-gray-400 text-xs">
+              {expandedFolders.has(node.path) ? '▼' : '▶'}
+            </span>
+          )}
               <span className="text-gray-300 text-sm flex-1">{node.name}</span>
               
               <div className="hidden group-hover:flex items-center gap-1">
@@ -794,10 +849,10 @@ export default function Right() {
                 >
                   <X className="w-3 h-3 text-gray-400" />
                 </button>
-              </div>
+        </div>
             )}
             
-            {node.type === 'folder' && expandedFolders.has(node.path) && node.children && (
+        {node.type === 'folder' && expandedFolders.has(node.path) && node.children && (
               <div>{renderFileTree(node.children, depth + 1, node.path)}</div>
             )}
           </div>
@@ -906,15 +961,15 @@ export default function Right() {
             </button>
           )}
 
-          {openFile && (
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
+        {openFile && (
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
               className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-600 text-white disabled:opacity-50 transition-colors"
-            >
-              {isSaving ? 'Saving...' : 'Save (⌘S)'}
-            </button>
-          )}
+          >
+            {isSaving ? 'Saving...' : 'Save (⌘S)'}
+          </button>
+        )}
           <button
             onClick={handleCreateContainer}
             disabled={containerLoading}
@@ -949,6 +1004,14 @@ export default function Right() {
             className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-800 text-white disabled:opacity-50 transition-colors"
           >
             {contractLoading ? 'Loading....' : 'Deploy Contract'}
+          </button>
+          <button
+            onClick={() => setTerminalOpen(!terminalOpen)}
+            className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] text-white transition-colors flex items-center gap-2"
+            title="Toggle Console"
+          >
+            <TerminalIcon className="w-3 h-3" />
+            Console
           </button>
         </div>
         <div className="text-xs text-gray-500 flex items-center gap-2">
@@ -1006,63 +1069,76 @@ export default function Right() {
 
         {/* Editor */}
         <div className="flex-1 bg-[#171717] flex flex-col" ref={containerRef}>
-          <div className="flex-1 overflow-hidden">
-            {openFile ? (
-              <Editor
-                height="100%"
-                language={getLanguage(openFile.name)}
-                theme="vs-dark"
-                value={getFileContent(openFile)}
-                onChange={handleEditorChange}
-                onMount={handleEditorDidMount}
-                options={{
-                  fontSize: fontSize,
-                  fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace",
-                  minimap: { enabled: true },
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  wordWrap: 'on',
-                  formatOnPaste: true,
-                  formatOnType: true,
-                  insertSpaces: true,
-                  suggestOnTriggerCharacters: true,
-                  acceptSuggestionOnEnter: 'on',
-                  quickSuggestions: true,
-                  parameterHints: { enabled: true },
-                  folding: true,
-                  renderWhitespace: 'selection',
-                  cursorBlinking: 'smooth',
-                  cursorSmoothCaretAnimation: 'on',
-                  smoothScrolling: true,
-                  padding: { top: 16 },
-                  scrollbar: {
-                    vertical: 'visible',
-                    horizontal: 'visible',
-                    useShadows: true,
-                    verticalSliderSize: 12,
-                    horizontalSliderSize: 12,
-                  },
-                  renderLineHighlight: 'gutter',
-                  overviewRulerBorder: false,
-                  hideCursorInOverviewRuler: false,
-        
-                }}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <div className="text-6xl mb-4">📁</div>
-                  <p className="text-lg mb-2">No file selected</p>
-                  <p className="text-sm">Open a file from the sidebar to start editing</p>
+          {/* Editor Area with Terminal */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-hidden">
+          {openFile ? (
+            <Editor
+              height="100%"
+              language={getLanguage(openFile.name)}
+              theme="vs-dark"
+              value={getFileContent(openFile)}
+              onChange={handleEditorChange}
+              onMount={handleEditorDidMount}
+              options={{
+                    fontSize: fontSize,
+                    fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', monospace",
+                minimap: { enabled: true },
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                tabSize: 2,
+                wordWrap: 'on',
+                formatOnPaste: true,
+                formatOnType: true,
+                    insertSpaces: true,
+                    suggestOnTriggerCharacters: true,
+                    acceptSuggestionOnEnter: 'on',
+                    quickSuggestions: true,
+                    parameterHints: { enabled: true },
+                    folding: true,
+                    renderWhitespace: 'selection',
+                    cursorBlinking: 'smooth',
+                    cursorSmoothCaretAnimation: 'on',
+                    smoothScrolling: true,
+                    padding: { top: 16 },
+                    scrollbar: {
+                      vertical: 'visible',
+                      horizontal: 'visible',
+                      useShadows: true,
+                      verticalSliderSize: 12,
+                      horizontalSliderSize: 12,
+                    },
+                    renderLineHighlight: 'gutter',
+                    overviewRulerBorder: false,
+                    hideCursorInOverviewRuler: false,
+              }}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">📁</div>
+                    <p className="text-lg mb-2">No file selected</p>
+                    <p className="text-sm">Open a file from the sidebar to start editing</p>
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
+
+            {/* Terminal */}
+            {terminalOpen && (
+              <Terminal 
+                isOpen={terminalOpen} 
+                onClose={() => setTerminalOpen(false)} 
+                logs={logs}
+                height={terminalHeight}
+                onHeightChange={setTerminalHeight}
+              />
             )}
           </div>
 
-          {/* Bottom bar */}
-          <div className="h-8 bg-[#171717] border-t border-[#252525] flex items-center justify-between px-3">
+          {/* Bottom bar - Always at the very bottom */}
+          <div className="h-8 bg-[#171717] border-t border-[#252525] flex items-center justify-between px-3 flex-shrink-0">
             <div className="text-xs text-gray-500 flex items-center gap-2">
               {openFile ? (
                 <>
