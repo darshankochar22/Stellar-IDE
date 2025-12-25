@@ -34,9 +34,9 @@ export async function createAndInitializeContainer(userId: string) {
       // Container doesn't exist, continue
     }
 
-    // Run container - it already has workspace at /home/developer/workspace
+    // Run container with STELLAR_HOME set to workspace for credential storage
     const { stdout: createOutput } = await execAsync(
-      `docker run -d --name ${containerName} stellar-sandbox:v1 tail -f /dev/null`
+      `docker run -d --name ${containerName} -e STELLAR_HOME=/home/developer/workspace/.stellar stellar-sandbox:v1 tail -f /dev/null`
     );
     console.log('Container created:', createOutput.trim());
 
