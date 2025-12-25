@@ -170,10 +170,25 @@ export async function createAccount(userId: string) {
     if (stderr) {
       console.error('Account creation error:', stderr);
     }
+
+    // Copy .config folder to workspace after account creation
+    console.log(`Copying .config folder to workspace...`);
+    try {
+      await execAsync(
+        `docker exec ${containerName} cp -r /home/developer/.config /home/developer/workspace/soroban-hello-world/.config`,
+        { timeout: 10000 }
+      );
+      console.log('.config folder copied to workspace');
+    } catch (copyError: any) {
+      console.error('Warning: Failed to copy .config folder:', copyError.message);
+      // Don't fail the account creation if copy fails
+    }
+
     return {
       success: true,
       stdout,
-      stderr
+      stderr,
+      message: 'Account created and credentials backed up'
     };
   } catch (error: any) {
     console.error('Docker error:', error);

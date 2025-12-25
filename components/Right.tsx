@@ -751,6 +751,12 @@ export default function Right() {
             if (line.trim()) logToTerminal(line, 'warn');
           });
         }
+        
+        // Log backup message
+        if (data.message) {
+          logToTerminal(`✓ ${data.message}`, 'log');
+        }
+        logToTerminal('✓ Credentials backed up to soroban-hello-world/.config', 'log');
       } else {
         logToTerminal(`✗ Failed to create account: ${data.error}`, 'error');
         setError(`Failed to create account: ${data.error}`);
