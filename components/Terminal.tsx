@@ -116,7 +116,11 @@ export default function Terminal({ isOpen, onClose, logs, height: initialHeight 
       {/* Terminal Content */}
       <div
         ref={terminalRef}
-        className="flex-1 overflow-y-auto bg-[#171717] font-mono text-xs p-4 space-y-1"
+        className="flex-1 overflow-y-auto bg-[#171717] font-mono text-xs p-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-[#171717]"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#4b5563 #171717'
+        }}
       >
         {logs.length === 0 ? (
           <div className="text-gray-500 text-xs">Waiting for console output...</div>
@@ -131,7 +135,23 @@ export default function Terminal({ isOpen, onClose, logs, height: initialHeight 
           ))
         )}
       </div>
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        div::-webkit-scrollbar {
+          width: 8px;
+        }
+        div::-webkit-scrollbar-track {
+          background: #171717;
+        }
+        div::-webkit-scrollbar-thumb {
+          background: #4b5563;
+          border-radius: 4px;
+        }
+        div::-webkit-scrollbar-thumb:hover {
+          background: #6b7280;
+        }
+      `}</style>
     </div>
   );
 }
-
