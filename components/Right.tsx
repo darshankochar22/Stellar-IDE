@@ -1158,7 +1158,8 @@ export default function Right({
         handleSave();
       }
 
-      if ((e.metaKey || e.ctrlKey) && (e.key === '+' || e.key === '=')) {
+      // Zoom In: CMD/CTRL + = or CMD/CTRL + SHIFT + I
+      if ((e.metaKey || e.ctrlKey) && ((e.key === '+' || e.key === '=') || (e.shiftKey && e.key === 'i'))) {
         e.preventDefault();
         const newFontSize = Math.min(fontSize + 2, 40);
         setFontSize(newFontSize);
@@ -1167,7 +1168,8 @@ export default function Right({
         }
       }
 
-      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_')) {
+      // Zoom Out: CMD/CTRL + - or CMD/CTRL + SHIFT + -
+      if ((e.metaKey || e.ctrlKey) && (e.key === '-' || e.key === '_' || (e.shiftKey && e.key === '-'))) {
         e.preventDefault();
         const newFontSize = Math.max(fontSize - 2, 8);
         setFontSize(newFontSize);
@@ -1176,6 +1178,7 @@ export default function Right({
         }
       }
 
+      // Reset Zoom: CMD/CTRL + 0
       if ((e.metaKey || e.ctrlKey) && e.key === '0') {
         e.preventDefault();
         setFontSize(14);

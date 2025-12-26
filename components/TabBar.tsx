@@ -51,7 +51,7 @@ const TabBar: React.FC<TabBarProps> = ({
             onClick={() => onSelectFile(file.path)}
             title={file.path}
           >
-            <span className="text-[11px] whitespace-nowrap mr-2 truncate max-w-xs">
+            <span className="text-sm whitespace-nowrap mr-2 truncate max-w-xs">
               {file.name}
               {file.isDirty && <span className="ml-1 text-yellow-400">●</span>}
             </span>
