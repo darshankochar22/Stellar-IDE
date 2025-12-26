@@ -74,7 +74,9 @@ export async function deployWithWallet(
 
     const signedUploadTxXdr = await signTransaction(
       preparedUploadTx.toXDR(),
-      NETWORK_PASSPHRASE
+      {
+        networkPassphrase: NETWORK_PASSPHRASE,
+      }
     );
 
     const uploadResult = await server.sendTransaction(
@@ -139,7 +141,9 @@ export async function deployWithWallet(
 
     const signedCreateTxXdr = await signTransaction(
       preparedCreateTx.toXDR(),
-      NETWORK_PASSPHRASE
+      {
+        networkPassphrase: NETWORK_PASSPHRASE,
+      }
     );
 
     const createResult = await server.sendTransaction(
