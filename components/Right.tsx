@@ -64,6 +64,11 @@ export default function Right({
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const messageCountRef = useRef(0);
   const [terminalHeight, setTerminalHeight] = useState(250);
+  const [sidebarWidth, setSidebarWidth] = useState(256); // 256px = w-64
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(256);
 
   // ============================================================================
   // HELPER FUNCTION: Log to Terminal
@@ -78,6 +83,46 @@ export default function Right({
       type
     }]);
   };
+
+  // ============================================================================
+  // SIDEBAR RESIZING
+  // ============================================================================
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsResizingSidebar(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = sidebarWidth;
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingSidebar) return;
+
+      const delta = e.clientX - startXRef.current;
+      const newWidth = startWidthRef.current + delta;
+
+      // Constrain width between 200px and 600px
+      const constrainedWidth = Math.max(200, Math.min(600, newWidth));
+      setSidebarWidth(constrainedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingSidebar(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+    };
+
+    if (isResizingSidebar) {
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isResizingSidebar, sidebarWidth]);
 
   // ============================================================================
   // Update terminal visibility based on prop
@@ -1222,43 +1267,55 @@ export default function Right({
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         {sidebarVisible && (
-        <div className="w-64 bg-[#171717] border-r border-[#252525] overflow-y-auto flex flex-col sidebar-scrollbar">
-        {/* Sidebar Header with Create Buttons */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-[#252525]">
-          <span className="text-xs text-gray-400 font-semibold uppercase">Explorer</span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleCreateFile('')}
-              className="p-1 hover:bg-[#252525] rounded transition-colors"
-              title="New File"
-              disabled={files.length === 0}
+          <>
+            <div 
+              ref={sidebarRef}
+              style={{ width: `${sidebarWidth}px` }}
+              className="bg-[#171717] border-r border-[#252525] overflow-y-auto flex flex-col sidebar-scrollbar transition-none"
             >
-              <FilePlus className="w-4 h-4 text-gray-400" />
-            </button>
-            <button
-              onClick={() => handleCreateFolder('')}
-              className="p-1 hover:bg-[#252525] rounded transition-colors"
-              title="New Folder"
-              disabled={files.length === 0}
-            >
-              <FolderPlus className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
-        </div>
-        
-          
-          <div className="py-2 flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="px-4 py-2 text-gray-500 text-sm">Loading files...</div>
-            ) : files.length === 0 ? (
-              <div className="px-4 py-2 text-gray-500 text-sm">
-                No files. Create a container first.
+              {/* Sidebar Header with Create Buttons */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-[#252525]">
+                <span className="text-xs text-gray-400 font-semibold uppercase">Explorer</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleCreateFile('')}
+                    className="p-1 hover:bg-[#252525] rounded transition-colors"
+                    title="New File"
+                    disabled={files.length === 0}
+                  >
+                    <FilePlus className="w-4 h-4 text-gray-400" />
+                  </button>
+                  <button
+                    onClick={() => handleCreateFolder('')}
+                    className="p-1 hover:bg-[#252525] rounded transition-colors"
+                    title="New Folder"
+                    disabled={files.length === 0}
+                  >
+                    <FolderPlus className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
               </div>
-            ) : (
-              renderFileTree(files)
-            )}
-          </div>
-        </div>
+              
+              <div className="py-2 flex-1 overflow-y-auto">
+                {isLoading ? (
+                  <div className="px-4 py-2 text-gray-500 text-sm">Loading files...</div>
+                ) : files.length === 0 ? (
+                  <div className="px-4 py-2 text-gray-500 text-sm">
+                    No files. Create a container first.
+                  </div>
+                ) : (
+                  renderFileTree(files)
+                )}
+              </div>
+            </div>
+
+            {/* Resize Handle */}
+            <div
+              onMouseDown={handleMouseDown}
+              className="w-1 bg-[#252525] hover:bg-[#3a3a3a] cursor-col-resize transition-colors shrink-0"
+              title="Drag to resize sidebar"
+            />
+          </>
         )}
 
         {/* Editor */}
@@ -1332,7 +1389,7 @@ export default function Right({
           </div>
 
           {/* Bottom bar - Always at the very bottom */}
-          <div className="h-8 bg-[#171717] border-t border-[#252525] flex items-center justify-between px-3 flex-shrink-0">
+          <div className="h-8 bg-[#171717] border-t border-[#252525] flex items-center justify-between px-3 shrink-0">
             <div className="text-xs text-gray-500 flex items-center gap-2">
               {openFile ? (
                 <>
