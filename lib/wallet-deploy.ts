@@ -127,8 +127,14 @@ export async function deployWithWallet(
     // 5. Create contract instance
     const freshAccount = await server.getAccount(address);
     
-    // Create the salt as a Buffer
-    const saltBuffer = Buffer.from(Date.now().toString());
+    // Create a 32-byte salt using crypto
+    const saltBuffer = Buffer.alloc(32);
+    const timestamp = Date.now().toString();
+    const randomBytes = Buffer.from(Math.random().toString(36).substring(2));
+    
+    // Fill the salt buffer with timestamp and random data
+    Buffer.from(timestamp).copy(saltBuffer, 0);
+    randomBytes.copy(saltBuffer, timestamp.length);
     
     const createTx = new StellarSdk.TransactionBuilder(freshAccount, {
       fee: StellarSdk.BASE_FEE,
