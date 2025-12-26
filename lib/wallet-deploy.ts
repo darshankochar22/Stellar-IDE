@@ -116,8 +116,11 @@ export async function deployWithWallet(
       throw new Error("Could not extract WASM hash from transaction");
     }
 
+    // Convert ScVal to Buffer - the returnValue is a ScVal object
+    const wasmHashBytes = wasmHash.bytes ? wasmHash.bytes() : wasmHash;
+
     logToTerminal(
-      `✓ WASM uploaded (hash: ${wasmHash.toString().slice(0, 16)}...)`,
+      `✓ WASM uploaded (hash: ${Buffer.from(wasmHashBytes).toString('hex').slice(0, 16)}...)`,
       "log"
     );
 
@@ -133,7 +136,7 @@ export async function deployWithWallet(
     })
       .addOperation(
         StellarSdk.Operation.createCustomContract({
-          wasmHash: uploadTxInfo.returnValue,
+          wasmHash: wasmHashBytes,
           address: new StellarSdk.Address(address),
           salt: saltBuffer,
         })
