@@ -207,8 +207,10 @@ export async function deployContract(userId: string, publicKey?: string){
     console.log(`Deploying contract in container: ${containerName}`);
     
     // Build the deployment command with optional publicKey parameter
+    // Note: --source-account is always required (the account that pays for deployment)
+    // --sign-with-key is optional (the key used to sign the transaction)
     const deployCmd = publicKey
-      ? `stellar contract deploy --wasm target/wasm32v1-none/release/hello_world.wasm --sign-with-key ${publicKey} --network testnet --alias hello_world`
+      ? `stellar contract deploy --wasm target/wasm32v1-none/release/hello_world.wasm --source-account darshan --sign-with-key ${publicKey} --network testnet --alias hello_world`
       : `stellar contract deploy --wasm target/wasm32v1-none/release/hello_world.wasm --source-account darshan --network testnet --alias hello_world`;
     
     const {stdout, stderr} = await execAsync(
