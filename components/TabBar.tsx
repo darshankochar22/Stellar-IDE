@@ -44,7 +44,7 @@ const TabBar: React.FC<TabBarProps> = ({
               transition-all duration-150
               hover:bg-[#1f1f1f]
               ${isActive 
-                ? 'bg-[#1e1e1e] text-[#ffffff] border-b-2 border-b-[#007acc]' 
+                ? 'bg-[#1e1e1e] text-[#ffffff]' 
                 : 'bg-[#171717] text-[#888888]'
               }
             `}
