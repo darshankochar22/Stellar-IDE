@@ -1213,7 +1213,7 @@ export default function Right({
                 ? 'hover:bg-[#252525] hover:text-[#cccccc] text-[#cccccc]'
                 : 'hover:bg-[#252525] hover:text-[#cccccc] text-[#888888]'
             }`}
-            onClick={onToggleSidebar}
+            onClick={() => onToggleSidebar?.()}
             title={sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
@@ -1229,7 +1229,7 @@ export default function Right({
                 ? 'hover:bg-[#252525] hover:text-[#cccccc] text-[#cccccc]'
                 : 'hover:bg-[#252525] hover:text-[#cccccc] text-[#888888]'
             }`}
-            onClick={onToggleTerminal}
+            onClick={() => onToggleTerminal?.()}
             title={terminalVisible ? 'Hide Terminal' : 'Show Terminal'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
@@ -1245,7 +1245,7 @@ export default function Right({
                 ? 'hover:bg-[#252525] hover:text-[#cccccc] text-[#cccccc]'
                 : 'hover:bg-[#252525] hover:text-[#cccccc] text-[#888888]'
             }`}
-            onClick={onToggleLeftComponent}
+            onClick={() => onToggleLeftComponent?.()}
             title={leftComponentVisible ? 'Hide Left Panel' : 'Show Left Panel'}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
