@@ -42,8 +42,8 @@ export default function Right() {
   const accumulatedDeltaRef = useRef(0);
   const [connected, setConnected] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [accountLoading, setAccountLoading] = useState(false);
-  const [contractLoading, setContractLoading] = useState(false);
+  //const [accountLoading, setAccountLoading] = useState(false);
+  //const [contractLoading, setContractLoading] = useState(false);
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const messageCountRef = useRef(0);
@@ -119,6 +119,7 @@ export default function Right() {
   // ============================================================================
   // DEPLOY CONTRACT - UPDATED TO LOG VM OUTPUT
   // ============================================================================
+  {/* 
   const handleDeployContract = async () => {
     if (!publicKey) {
       logToTerminal('✗ Wallet not connected. Please connect your Freighter wallet first.', 'error');
@@ -179,7 +180,7 @@ export default function Right() {
       setContractLoading(false);
     }
   }
-
+  */}
   // ============================================================================
   // Freighter Wallet Functions
   // ============================================================================
@@ -730,6 +731,7 @@ export default function Right() {
   // ============================================================================
   // CREATE ACCOUNT - UPDATED TO LOG TO TERMINAL
   // ============================================================================
+  { /*
   async function handleCreateAccount() {
     setAccountLoading(true);
     setError(null);
@@ -776,7 +778,7 @@ export default function Right() {
       setAccountLoading(false);
     }
   }
-
+*/}
   function toggleFolder(path: string) {
     setExpandedFolders(prev => {
       const next = new Set(prev);
