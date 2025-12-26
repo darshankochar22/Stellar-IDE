@@ -55,3 +55,26 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
 }
+
+/* Tab Bar Custom Scrollbar */
+.tab-bar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #404040 #171717;
+}
+
+.tab-bar-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tab-bar-scrollbar::-webkit-scrollbar-track {
+  background: #171717;
+}
+
+.tab-bar-scrollbar::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 3px;
+}
+
+.tab-bar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #505050;
+}

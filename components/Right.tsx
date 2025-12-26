@@ -7,6 +7,7 @@ import { FilePlus, FolderPlus, X, Trash2 } from 'lucide-react';
 import { isConnected, setAllowed, getAddress } from "@stellar/freighter-api";
 import Terminal, { type LogMessage } from './Terminal';
 import { DeployButton } from './DeployButton';
+import TabBar, { type OpenFile } from './TabBar';
 
 type MonacoType = any;
 
@@ -69,6 +70,7 @@ export default function Right({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(256);
+  const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
 
   // ============================================================================
   // HELPER FUNCTION: Log to Terminal
@@ -123,6 +125,43 @@ export default function Right({
       };
     }
   }, [isResizingSidebar, sidebarWidth]);
+
+  // ============================================================================
+  // TAB BAR HANDLERS
+  // ============================================================================
+  const handleSelectTab = (path: string) => {
+    const file = openFiles.find(f => f.path === path);
+    if (file) {
+      // Find the actual FileNode from the file tree
+      const findFileNode = (nodes: FileNode[]): FileNode | null => {
+        for (const node of nodes) {
+          if (node.path === path) return node;
+          if (node.children) {
+            const found = findFileNode(node.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const fileNode = findFileNode(files);
+      if (fileNode) {
+        setOpenFile(fileNode);
+      }
+    }
+  };
+
+  const handleCloseTab = (path: string) => {
+    setOpenFiles(prev => prev.filter(f => f.path !== path));
+    // If the closed file was active, switch to another file
+    if (openFile?.path === path) {
+      const remainingFiles = openFiles.filter(f => f.path !== path);
+      if (remainingFiles.length > 0) {
+        handleSelectTab(remainingFiles[remainingFiles.length - 1].path);
+      } else {
+        setOpenFile(null);
+      }
+    }
+  };
 
   // ============================================================================
   // Update terminal visibility based on prop
@@ -479,6 +518,10 @@ export default function Right({
   function handleEditorChange(value: string | undefined) {
     if (openFile && value !== undefined) {
       setFileContents(prev => new Map(prev).set(openFile.path, value));
+      // Mark file as dirty in the tab bar
+      setOpenFiles(prev => prev.map(f => 
+        f.path === openFile.path ? { ...f, isDirty: true } : f
+      ));
     }
   }
 
@@ -486,6 +529,14 @@ export default function Right({
     if (file.type === 'file') {
       if (fileContents.has(file.path)) {
         setOpenFile(file);
+        // Add to open files if not already there
+        setOpenFiles(prev => {
+          const exists = prev.find(f => f.path === file.path);
+          if (!exists) {
+            return [...prev, { path: file.path, name: file.name, isDirty: false }];
+          }
+          return prev;
+        });
         return;
       }
 
@@ -500,6 +551,14 @@ export default function Right({
         if (data.success) {
         setFileContents(prev => new Map(prev).set(file.path, data.content));
         setOpenFile(file);
+        // Add to open files
+        setOpenFiles(prev => {
+          const exists = prev.find(f => f.path === file.path);
+          if (!exists) {
+            return [...prev, { path: file.path, name: file.name, isDirty: false }];
+          }
+          return prev;
+        });
           setError(null);
         } else {
           setError(`Failed to load ${file.name}: ${data.error}`);
@@ -538,6 +597,10 @@ export default function Right({
       
       if (data.success) {
         logToTerminal(`✓ ${openFile.name} saved successfully`, 'log');
+        // Mark file as clean
+        setOpenFiles(prev => prev.map(f => 
+          f.path === openFile.path ? { ...f, isDirty: false } : f
+        ));
         setTimeout(() => setError(null), 2000);
       } else {
         logToTerminal(`✗ Failed to save ${openFile.name}: ${data.error}`, 'error');
@@ -1320,6 +1383,14 @@ export default function Right({
 
         {/* Editor */}
         <div className="flex-1 bg-[#171717] flex flex-col" ref={containerRef}>
+          {/* Tab Bar */}
+          <TabBar 
+            openFiles={openFiles}
+            activeFile={openFile?.path || null}
+            onSelectFile={handleSelectTab}
+            onCloseFile={handleCloseTab}
+          />
+
           {/* Editor Area with Terminal */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex-1 overflow-hidden">
