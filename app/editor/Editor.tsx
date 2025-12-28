@@ -5,7 +5,7 @@ import RightComponent from '@/components/Right';
 
 const EditorComponent = () => {
     const [sidebarVisible, setSidebarVisible] = useState(true);
-    const [leftComponentVisible, setLeftComponentVisible] = useState(true);
+    const [leftComponentVisible, setLeftComponentVisible] = useState(false);
     const [terminalVisible, setTerminalVisible] = useState(false);
 
     const handleToggleSidebar = () => {

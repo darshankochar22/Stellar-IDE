@@ -36,7 +36,7 @@ export default function Right({
   onToggleSidebar,
   onToggleTerminal,
   onToggleLeftComponent,
-  leftComponentVisible = true,
+  leftComponentVisible = false,
 }: RightProps) {
   const [fontSize, setFontSize] = useState(14);
   const [containerLoading, setContainerLoading] = useState(false);
