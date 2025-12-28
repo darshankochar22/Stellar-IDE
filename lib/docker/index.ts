@@ -39,6 +39,7 @@ export {
   deleteFile,
   deleteFolder,
   createFile,
+  createFolder,
 } from './fileOps';
 
 // Export build operations

@@ -50,18 +50,12 @@ export default function Right({
   const [terminalHeight, setTerminalHeight] = useState(250);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // ============================================================================
-  // Terminal Logging hook
-  // ============================================================================
   const { logToTerminal } = useTerminalLogging({
     onLogsUpdate: (newLogs) => {
       setLogs((prev) => [...prev, ...newLogs]);
     },
   });
 
-  // ============================================================================
-  // Sidebar Resize hook
-  // ============================================================================
   const { sidebarWidth, handleMouseDown } = useSidebarResize({
     initialWidth: 256,
     minWidth: 200,
@@ -160,12 +154,9 @@ export default function Right({
     setTerminalOpen(terminalVisible);
   }, [terminalVisible]);
 
-  // ============================================================================
-  // ARCHIVED FUNCTIONS
-  // ============================================================================
+
   // Deploy Contract: hooks/archived/useContractDeployment.ts
   // Create Account: hooks/archived/useAccountCreation.ts
-  // See hooks/archived/README.md for implementation details
 
   return (
     <div className="flex flex-col h-full bg-[#171717] overflow-hidden">

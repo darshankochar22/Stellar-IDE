@@ -303,3 +303,35 @@ export async function createFile(userId: string, filePath: string, content: stri
   }
 }
 
+/**
+ * Create a folder in the container
+ * @param userId The user ID
+ * @param folderPath The path of the folder to create
+ * @returns Success or error
+ */
+export async function createFolder(userId: string, folderPath: string) {
+  try {
+    const containerName = getContainerName(userId);
+    const safePath = escapeFilePath(folderPath);
+    console.log(`Creating folder: ${safePath} in container: ${containerName}`);
+
+    const fullPath = `${getProjectPath()}/${safePath}`;
+
+    // Create folder recursively
+    await execAsync(`docker exec -u developer ${containerName} mkdir -p ${fullPath}`);
+
+    console.log(`Folder created: ${fullPath}`);
+    return {
+      success: true,
+      message: `Folder ${folderPath} created`,
+    };
+  } catch (error) {
+    const err = error as { message?: string };
+    console.error('Docker error:', err);
+    return {
+      success: false,
+      error: err.message || 'Failed to create folder',
+    };
+  }
+}
+
