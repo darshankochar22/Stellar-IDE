@@ -21,11 +21,6 @@ type FileNode = {
   children?: FileNode[];
 };
 
-type CreationState = {
-  parentPath: string;
-  type: "file" | "folder";
-} | null;
-
 interface RightProps {
   sidebarVisible?: boolean;
   terminalVisible?: boolean;
@@ -110,6 +105,8 @@ export default function Right({
     toggleFolder,
     setNewItemName,
     setOpenFile,
+    setFileContents,
+    setFiles,
   } = useFileManager(userId, logToTerminal, setError, setTerminalOpen);
 
   // ============================================================================
@@ -442,287 +439,15 @@ export default function Right({
 
   function handleEditorChange(value: string | undefined) {
     if (openFile && value !== undefined) {
-      setFileContents((prev) => new Map(prev).set(openFile.path, value));
+      const newContents = new Map(fileContents);
+      newContents.set(openFile.path, value);
+      setFileContents(newContents);
       // Mark file as dirty in the tab bar
       setOpenFiles((prev) =>
         prev.map((f) =>
           f.path === openFile.path ? { ...f, isDirty: true } : f
         )
       );
-    }
-  }
-
-  async function handleFileClick(file: FileNode) {
-    if (file.type === "file") {
-      if (fileContents.has(file.path)) {
-        setOpenFile(file);
-        // Add to open files if not already there
-        setOpenFiles((prev) => {
-          const exists = prev.find((f) => f.path === file.path);
-          if (!exists) {
-            return [
-              ...prev,
-              { path: file.path, name: file.name, isDirty: false },
-            ];
-          }
-          return prev;
-        });
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/docker", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "getFileContent",
-            userId,
-            filePath: file.path,
-          }),
-        });
-        const data = await response.json();
-
-        if (data.success) {
-          setFileContents((prev) => new Map(prev).set(file.path, data.content));
-          setOpenFile(file);
-          // Add to open files
-          setOpenFiles((prev) => {
-            const exists = prev.find((f) => f.path === file.path);
-            if (!exists) {
-              return [
-                ...prev,
-                { path: file.path, name: file.name, isDirty: false },
-              ];
-            }
-            return prev;
-          });
-          setError(null);
-        } else {
-          setError(`Failed to load ${file.name}: ${data.error}`);
-        }
-      } catch (error) {
-        console.error("Failed to load file:", error);
-        setError(`Failed to load ${file.name}`);
-      }
-    }
-  }
-
-  // ============================================================================
-  // SAVE FILE - UPDATED TO LOG TO TERMINAL
-  // ============================================================================
-  const handleSave = useCallback(async () => {
-    if (!openFile) return;
-    setIsSaving(true);
-    setError(null);
-    logToTerminal(`Saving ${openFile.name}...`, "info");
-
-    try {
-      const content = fileContents.get(openFile.path) || "";
-      const response = await fetch("/api/docker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "saveFileContent",
-          userId,
-          filePath: openFile.path,
-          content,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        logToTerminal(`✓ ${openFile.name} saved successfully`, "log");
-        // Mark file as clean
-        setOpenFiles((prev) =>
-          prev.map((f) =>
-            f.path === openFile.path ? { ...f, isDirty: false } : f
-          )
-        );
-        setTimeout(() => setError(null), 2000);
-      } else {
-        logToTerminal(
-          `✗ Failed to save ${openFile.name}: ${data.error}`,
-          "error"
-        );
-        setError(`Failed to save: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to save ${openFile.name}: ${error}`, "error");
-      setError("Failed to save file");
-    } finally {
-      setIsSaving(false);
-    }
-  }, [openFile, fileContents, userId, logToTerminal]);
-
-  async function handleCreateFile(parentPath: string = "") {
-    setCreatingItem({ parentPath, type: "file" });
-    setNewItemName("");
-  }
-
-  async function handleCreateFolder(parentPath: string = "") {
-    setCreatingItem({ parentPath, type: "folder" });
-    setNewItemName("");
-  }
-
-  // ============================================================================
-  // CREATE FILE/FOLDER - UPDATED TO LOG TO TERMINAL
-  // ============================================================================
-  async function confirmCreateItem() {
-    if (!creatingItem || !newItemName.trim()) {
-      setCreatingItem(null);
-      return;
-    }
-
-    const fileName = newItemName.trim();
-    const fullPath = creatingItem.parentPath
-      ? `${creatingItem.parentPath}/${fileName}`
-      : fileName;
-
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal(`Creating ${creatingItem.type}: ${fullPath}`, "info");
-
-    try {
-      const response = await fetch("/api/docker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: creatingItem.type === "file" ? "createFile" : "createFolder",
-          userId,
-          filePath: fullPath,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        logToTerminal(`✓ ${creatingItem.type} created: ${fullPath}`, "log");
-        await loadFiles();
-
-        if (creatingItem.type === "file") {
-          const newFile: FileNode = {
-            name: fileName,
-            type: "file",
-            path: fullPath,
-          };
-          setFileContents((prev) => new Map(prev).set(fullPath, ""));
-          setOpenFile(newFile);
-        } else {
-          setExpandedFolders((prev) => new Set(prev).add(fullPath));
-        }
-
-        setCreatingItem(null);
-        setNewItemName("");
-      } else {
-        logToTerminal(
-          `✗ Failed to create ${creatingItem.type}: ${data.error}`,
-          "error"
-        );
-        setError(`Failed to create ${creatingItem.type}: ${data.error}`);
-        setCreatingItem(null);
-      }
-    } catch (error) {
-      logToTerminal(
-        `✗ Failed to create ${creatingItem.type}: ${error}`,
-        "error"
-      );
-      setError(`Failed to create ${creatingItem.type}`);
-      setCreatingItem(null);
-    }
-  }
-
-  function cancelCreateItem() {
-    setCreatingItem(null);
-    setNewItemName("");
-  }
-
-  // ============================================================================
-  // DELETE FILE - UPDATED TO LOG TO TERMINAL
-  // ============================================================================
-  async function handleDeleteFile(filePath: string) {
-    if (!confirm(`Delete file: ${filePath}?`)) {
-      return;
-    }
-
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal(`Deleting ${filePath}...`, "info");
-
-    try {
-      const response = await fetch("/api/docker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "deleteFile",
-          userId,
-          filePath,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        logToTerminal(`✓ File deleted: ${filePath}`, "log");
-        if (openFile?.path === filePath) {
-          setOpenFile(null);
-        }
-        setFileContents((prev) => {
-          const newContents = new Map(prev);
-          newContents.delete(filePath);
-          return newContents;
-        });
-        await loadFiles();
-      } else {
-        logToTerminal(`✗ Failed to delete file: ${data.error}`, "error");
-        setError(`Failed to delete file: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to delete file: ${error}`, "error");
-      setError("Failed to delete file");
-    }
-  }
-
-  // ============================================================================
-  // DELETE FOLDER - UPDATED TO LOG TO TERMINAL
-  // ============================================================================
-  async function handleDeleteFolder(folderPath: string) {
-    if (!confirm(`Delete folder and all contents: ${folderPath}?`)) {
-      return;
-    }
-
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal(`Deleting folder ${folderPath}...`, "info");
-
-    try {
-      const response = await fetch("/api/docker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "deleteFolder",
-          userId,
-          filePath: folderPath,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        logToTerminal(`✓ Folder deleted: ${folderPath}`, "log");
-        if (openFile?.path.startsWith(folderPath)) {
-          setOpenFile(null);
-        }
-        setExpandedFolders((prev) => {
-          const newExpanded = new Set(prev);
-          newExpanded.delete(folderPath);
-          return newExpanded;
-        });
-        await loadFiles();
-      } else {
-        logToTerminal(`✗ Failed to delete folder: ${data.error}`, "error");
-        setError(`Failed to delete folder: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to delete folder: ${error}`, "error");
-      setError("Failed to delete folder");
     }
   }
 
@@ -858,73 +583,6 @@ export default function Right({
     }
   }
 */
-  }
-  function toggleFolder(path: string) {
-    setExpandedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }
-
-  function buildFileTree(flatFiles: string[]): FileNode[] {
-    type TreeNode = FileNode & { _children?: { [key: string]: TreeNode } };
-    const root: { [key: string]: TreeNode } = {};
-
-    flatFiles.forEach((filePath) => {
-      const parts = filePath.split("/").filter((p) => p.length > 0);
-      let currentLevel = root;
-
-      parts.forEach((part, index) => {
-        if (!currentLevel[part]) {
-          const isFile = index === parts.length - 1;
-          const fullPath = parts.slice(0, index + 1).join("/");
-
-          currentLevel[part] = {
-            name: part,
-            type: isFile ? "file" : "folder",
-            path: fullPath,
-            children: isFile ? undefined : [],
-            _children: isFile ? undefined : {},
-          };
-        }
-
-        if (!parts[index + 1]) return;
-
-        const node = currentLevel[part];
-        if (!node._children) {
-          node._children = {};
-        }
-        currentLevel = node._children;
-      });
-    });
-
-    function convertToArray(nodeMap: { [key: string]: TreeNode }): FileNode[] {
-      return Object.values(nodeMap)
-        .sort((a, b) => {
-          if (a.type === b.type) return a.name.localeCompare(b.name);
-          return a.type === "folder" ? -1 : 1;
-        })
-        .map((node) => {
-          const result: FileNode = {
-            name: node.name,
-            type: node.type,
-            path: node.path,
-          };
-
-          if (node.type === "folder" && node._children) {
-            result.children = convertToArray(node._children);
-          }
-
-          return result;
-        });
-    }
-
-    return convertToArray(root);
   }
 
   // Keyboard shortcuts

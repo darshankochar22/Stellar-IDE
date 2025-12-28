@@ -43,6 +43,7 @@ interface UseFileManagerReturn {
   setOpenFile: (file: FileNode | null) => void;
   setFileContents: (contents: Map<string, string>) => void;
   setTerminalOpen: (open: boolean) => void;
+  setFiles: (files: FileNode[]) => void;
 }
 
 export function useFileManager(
@@ -443,6 +444,7 @@ export function useFileManager(
     setOpenFile,
     setFileContents,
     setTerminalOpen: onSetTerminalOpen,
+    setFiles,
   };
 }
 
