@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { OpenFile } from "@/components/TabBar";
 
 type FileNode = {
@@ -25,6 +25,14 @@ export function useTabManagement({
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
   const [currentOpenFile, setCurrentOpenFile] = useState<FileNode | null>(null);
 
+  // Use ref to store callback without creating dependency
+  const onOpenFilesChangeRef = useRef(onOpenFilesChange);
+
+  // Update ref when callback changes
+  useEffect(() => {
+    onOpenFilesChangeRef.current = onOpenFilesChange;
+  }, [onOpenFilesChange]);
+
   // Find file node in tree
   const findFileNode = useCallback(
     (path: string): FileNode | null => {
@@ -43,7 +51,7 @@ export function useTabManagement({
     [files]
   );
 
-  // Add file to open files
+  // Add file to open files - no dependencies on callbacks
   const addOpenFile = useCallback(
     (file: FileNode) => {
       setOpenFiles((prev) => {
@@ -53,37 +61,47 @@ export function useTabManagement({
             ...prev,
             { path: file.path, name: file.name, isDirty: false },
           ];
-          onOpenFilesChange(newFiles);
+          onOpenFilesChangeRef.current(newFiles);
           return newFiles;
         }
-        onOpenFilesChange(prev);
+        onOpenFilesChangeRef.current(prev);
         return prev;
       });
     },
-    [onOpenFilesChange]
+    []
   );
 
-  // Select tab
+  // Store onFileSelect in ref to avoid dependency
+  const onFileSelectRef = useRef(onFileSelect);
+
+  useEffect(() => {
+    onFileSelectRef.current = onFileSelect;
+  }, [onFileSelect]);
+
+  // Select tab - use ref instead of direct dependency
   const handleSelectTab = useCallback(
     (path: string) => {
-      const file = openFiles.find((f) => f.path === path);
-      if (file) {
-        const fileNode = findFileNode(path);
-        if (fileNode) {
-          setCurrentOpenFile(fileNode);
-          onFileSelect(fileNode);
+      setOpenFiles((prev) => {
+        const file = prev.find((f) => f.path === path);
+        if (file) {
+          const fileNode = findFileNode(path);
+          if (fileNode) {
+            setCurrentOpenFile(fileNode);
+            onFileSelectRef.current(fileNode);
+          }
         }
-      }
+        return prev;
+      });
     },
-    [openFiles, findFileNode, onFileSelect]
+    [findFileNode]
   );
 
-  // Close tab
+  // Close tab - use ref and state setter to avoid dependencies
   const handleCloseTab = useCallback(
     (path: string) => {
       setOpenFiles((prev) => {
         const filtered = prev.filter((f) => f.path !== path);
-        onOpenFilesChange(filtered);
+        onOpenFilesChangeRef.current(filtered);
 
         // If the closed file was active, switch to another file
         if (currentOpenFile?.path === path) {
@@ -93,7 +111,7 @@ export function useTabManagement({
             );
             if (nextFile) {
               setCurrentOpenFile(nextFile);
-              onFileSelect(nextFile);
+              onFileSelectRef.current(nextFile);
             }
           } else {
             setCurrentOpenFile(null);
@@ -103,7 +121,7 @@ export function useTabManagement({
         return filtered;
       });
     },
-    [currentOpenFile, findFileNode, onFileSelect, onOpenFilesChange]
+    [findFileNode, currentOpenFile?.path]
   );
 
   return {

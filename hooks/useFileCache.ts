@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 type FileNode = {
   name: string;
@@ -31,6 +31,12 @@ export function useFileCache(
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Use ref to store current fileContents to avoid stale closure in handleFileClick
+  const fileContentsRef = useRef<Map<string, string>>(fileContents);
+
+  // Update ref when fileContents changes
+  fileContentsRef.current = fileContents;
+
   /**
    * Load file content from container via API
    * Caches content to avoid repeated API calls
@@ -39,13 +45,13 @@ export function useFileCache(
   const handleFileClick = useCallback(
     async (file: FileNode) => {
       if (file.type === "file") {
-        // Check if already cached
-        if (fileContents.has(file.path)) {
+        // Check if already cached using ref to avoid dependency
+        if (fileContentsRef.current.has(file.path)) {
           setOpenFile(file);
           return;
         }
 
-        setIsLoading(true);
+
         try {
           const response = await fetch("/api/docker", {
             method: "POST",
@@ -70,12 +76,10 @@ export function useFileCache(
         } catch (error) {
           console.error("Failed to load file:", error);
           onError(`Failed to load ${file.name}`);
-        } finally {
-          setIsLoading(false);
         }
       }
     },
-    [fileContents, userId, onError]
+    [userId, onError]
   );
 
   /**

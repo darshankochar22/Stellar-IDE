@@ -119,7 +119,7 @@ function SidebarContent({
                       onDeleteFolder(node.path);
                     }
                   }}
-                  className="p-1 hover:bg-[#ff4444] rounded transition-colors"
+                  className="p-1 hover:bg-[#17171717] rounded transition-colors"
                   title={`Delete ${node.type}`}
                 >
                   <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-400" />

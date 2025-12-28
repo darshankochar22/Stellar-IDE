@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { type LogMessage } from "./Terminal";
 import Sidebar from "./Sidebar";
 import EditorPanel from "./EditorPanel";
@@ -140,25 +140,43 @@ export default function Right({
       },
     });
 
+  // Store callbacks in refs to avoid dependency chains
+  const handleFileClickRef = useRef(handleFileClick);
+  const addOpenFileRef = useRef(addOpenFile);
+
+  useEffect(() => {
+    handleFileClickRef.current = handleFileClick;
+    addOpenFileRef.current = addOpenFile;
+  }, [handleFileClick, addOpenFile]);
+
   // FILE CLICK WRAPPER - Sync with openFiles TabBar state
-  const handleFileClickWrapper = useCallback(
-    async (file: FileNode) => {
-      await handleFileClick(file);
-      // Add to open files
-      addOpenFile(file);
+  // Memoized without dependencies to prevent callback redefinition
+  const handleFileClickWrapper = useMemo(
+    () => async (file: FileNode) => {
+      await handleFileClickRef.current(file);
+      addOpenFileRef.current(file);
     },
-    [handleFileClick, addOpenFile]
+    []
   );
 
   // Memoize root file/folder creation handlers to prevent Sidebar re-renders
-  const handleCreateFileRoot = useCallback(
-    () => handleCreateFile(""),
-    [handleCreateFile]
+  // Use refs to avoid dependencies
+  const handleCreateFileRef = useRef(handleCreateFile);
+  const handleCreateFolderRef = useRef(handleCreateFolder);
+
+  useEffect(() => {
+    handleCreateFileRef.current = handleCreateFile;
+    handleCreateFolderRef.current = handleCreateFolder;
+  }, [handleCreateFile, handleCreateFolder]);
+
+  const handleCreateFileRoot = useMemo(
+    () => () => handleCreateFileRef.current(""),
+    []
   );
 
-  const handleCreateFolderRoot = useCallback(
-    () => handleCreateFolder(""),
-    [handleCreateFolder]
+  const handleCreateFolderRoot = useMemo(
+    () => () => handleCreateFolderRef.current(""),
+    []
   );
 
   useEffect(() => {
