@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import type { editor } from "monaco-editor";
 import { type LogMessage } from "./Terminal";
 import type { OpenFile } from "./TabBar";
 import Sidebar from "./Sidebar";
@@ -10,8 +9,7 @@ import TopBar from "./TopBar";
 import ErrorBanner from "./ErrorBanner";
 import { useWallet } from "../hooks/useWallet";
 import { useFileManager } from "../hooks/useFileManager";
-
-type MonacoType = unknown;
+import { useMonacoSetup } from "../hooks/useMonacoSetup";
 
 type FileNode = {
   name: string;
@@ -51,10 +49,7 @@ export default function Right({
   const startXRef = useRef(0);
   const startWidthRef = useRef(256);
   const [openFiles, setOpenFiles] = useState<OpenFile[]>([]);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const accumulatedDeltaRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   //const [accountLoading, setAccountLoading] = useState(false);
   //const [contractLoading, setContractLoading] = useState(false);
@@ -108,6 +103,12 @@ export default function Right({
     setFileContents,
     setFiles,
   } = useFileManager(userId, logToTerminal, setError, setTerminalOpen);
+
+  // Monaco Editor Setup hook
+  const { editorRef, handleEditorDidMount } = useMonacoSetup({
+    onFontSizeChange: setFontSize,
+    containerRef,
+  });
 
   // ============================================================================
   // SIDEBAR RESIZING
@@ -341,123 +342,6 @@ export default function Right({
   */
   }
 
-  // ============================================================================
-  // Monaco Editor Setup (KEEP AS IS)
-  // ============================================================================
-  useEffect(() => {
-    const styleId = "monaco-custom-styles";
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement("style");
-      style.id = styleId;
-      style.textContent = `
-        .monaco-editor .focused .selected-text,
-        .monaco-editor .view-line,
-        .monaco-editor .margin,
-        .monaco-editor,
-        .monaco-editor-background,
-        .monaco-editor .inputarea.ime-input {
-          outline: none !important;
-          border: none !important;
-        }
-        .monaco-editor .view-lines,
-        .monaco-editor .margin-view-overlays,
-        .monaco-editor .cursors-layer,
-        .monaco-editor .lines-content,
-        .monaco-editor .view-line span {
-          outline: none !important;
-        }
-        .monaco-editor .selected-text {
-          border: none !important;
-        }
-        .monaco-editor:focus,
-        .monaco-editor.focused {
-          outline: none !important;
-          border: none !important;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    return () => {
-      const styleElement = document.getElementById(styleId);
-      if (styleElement) styleElement.remove();
-    };
-  }, []);
-
-  const handleMouseWheel = (event: WheelEvent) => {
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      if (editorRef.current) {
-        accumulatedDeltaRef.current += event.deltaY;
-
-        if (wheelTimeoutRef.current) {
-          clearTimeout(wheelTimeoutRef.current);
-        }
-
-        wheelTimeoutRef.current = setTimeout(() => {
-          const editor = editorRef.current;
-          if (!editor) return;
-
-          const currentFontSize =
-            (editor.getOption(55) as unknown as number) || 14;
-          const normalizedDelta = accumulatedDeltaRef.current / 100;
-          const zoomDelta = Math.round(normalizedDelta);
-
-          if (zoomDelta !== 0) {
-            const newFontSize = Math.max(
-              8,
-              Math.min(40, currentFontSize - zoomDelta)
-            );
-            if (newFontSize !== currentFontSize) {
-              setFontSize(newFontSize);
-              editor.updateOptions({ fontSize: newFontSize });
-            }
-          }
-
-          accumulatedDeltaRef.current = 0;
-        }, 50);
-      }
-    }
-  };
-
-  function handleEditorDidMount(
-    editorInstance: editor.IStandaloneCodeEditor,
-    monaco: MonacoType
-  ) {
-    editorRef.current = editorInstance;
-    editorInstance.focus();
-
-    if (monaco && monaco.languages) {
-      monaco.languages.typescript?.typescriptDefaults?.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
-        allowNonTsExtensions: true,
-        moduleResolution:
-          monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        module: monaco.languages.typescript.ModuleKind.ESNext,
-        noEmit: true,
-        esModuleInterop: true,
-        jsx: monaco.languages.typescript.JsxEmit.React,
-        allowJs: true,
-        skipLibCheck: true,
-        strict: false,
-      });
-    }
-
-    if (containerRef.current) {
-      containerRef.current.addEventListener("wheel", handleMouseWheel, {
-        passive: false,
-      });
-    }
-
-    return () => {
-      if (containerRef.current) {
-        containerRef.current.removeEventListener("wheel", handleMouseWheel);
-      }
-      if (wheelTimeoutRef.current) {
-        clearTimeout(wheelTimeoutRef.current);
-      }
-    };
-  }
-
   function handleEditorChange(value: string | undefined) {
     if (openFile && value !== undefined) {
       const newContents = new Map(fileContents);
@@ -652,7 +536,7 @@ export default function Right({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fontSize, openFile, fileContents, handleSave]);
+  }, [fontSize, openFile, fileContents, handleSave, editorRef]);
 
   return (
     <div className="flex flex-col h-full bg-[#171717] overflow-hidden">
