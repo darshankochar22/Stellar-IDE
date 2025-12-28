@@ -150,10 +150,20 @@ export default function Right({
     [handleFileClick, addOpenFile]
   );
 
+  // Memoize root file/folder creation handlers to prevent Sidebar re-renders
+  const handleCreateFileRoot = useCallback(
+    () => handleCreateFile(""),
+    [handleCreateFile]
+  );
+
+  const handleCreateFolderRoot = useCallback(
+    () => handleCreateFolder(""),
+    [handleCreateFolder]
+  );
+
   useEffect(() => {
     setTerminalOpen(terminalVisible);
   }, [terminalVisible]);
-
 
   // Deploy Contract: hooks/archived/useContractDeployment.ts
   // Create Account: hooks/archived/useAccountCreation.ts
@@ -205,8 +215,8 @@ export default function Right({
             onSetNewItemName={setNewItemName}
             onConfirmCreateItem={confirmCreateItem}
             onCancelCreateItem={cancelCreateItem}
-            onCreateFileRoot={() => handleCreateFile("")}
-            onCreateFolderRoot={() => handleCreateFolder("")}
+            onCreateFileRoot={handleCreateFileRoot}
+            onCreateFolderRoot={handleCreateFolderRoot}
           />
         )}
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { FilePlus, FolderPlus, X, Trash2 } from "lucide-react";
 
 type FileNode = {
@@ -17,7 +18,7 @@ type CreationState = {
 
 interface SidebarProps {
   sidebarWidth: number;
-  onMouseDown: (e: React.MouseEvent) => void;
+  onMouseDown: (e: React.MouseEvent<HTMLDivElement>) => void;
   files: FileNode[];
   isLoading: boolean;
   expandedFolders: Set<string>;
@@ -37,7 +38,7 @@ interface SidebarProps {
   onCreateFolderRoot: () => void;
 }
 
-export default function Sidebar({
+function SidebarContent({
   sidebarWidth,
   onMouseDown,
   files,
@@ -270,3 +271,9 @@ export default function Sidebar({
     </>
   );
 }
+
+/**
+ * Memoized Sidebar component to prevent unnecessary re-renders
+ * Only re-renders when its props actually change, not when parent re-renders
+ */
+export default memo(SidebarContent);
