@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { type LogMessage } from "./Terminal";
 import type { OpenFile } from "./TabBar";
 import Sidebar from "./Sidebar";
@@ -10,6 +10,7 @@ import ErrorBanner from "./ErrorBanner";
 import { useWallet } from "../hooks/useWallet";
 import { useFileManager } from "../hooks/useFileManager";
 import { useMonacoSetup } from "../hooks/useMonacoSetup";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
 type FileNode = {
   name: string;
@@ -108,6 +109,14 @@ export default function Right({
   const { editorRef, handleEditorDidMount } = useMonacoSetup({
     onFontSizeChange: setFontSize,
     containerRef,
+  });
+
+  // Keyboard Shortcuts hook
+  useKeyboardShortcuts({
+    onSave: handleSave,
+    fontSize,
+    onFontSizeChange: setFontSize,
+    editorRef,
   });
 
   // ============================================================================
@@ -489,54 +498,6 @@ export default function Right({
   }
 */
   }
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        handleSave();
-      }
-
-      // Zoom In: CMD/CTRL + = or CMD/CTRL + SHIFT + I
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        (e.key === "+" || e.key === "=" || (e.shiftKey && e.key === "i"))
-      ) {
-        e.preventDefault();
-        const newFontSize = Math.min(fontSize + 2, 40);
-        setFontSize(newFontSize);
-        if (editorRef.current) {
-          editorRef.current.updateOptions({ fontSize: newFontSize });
-        }
-      }
-
-      // Zoom Out: CMD/CTRL + - or CMD/CTRL + SHIFT + -
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        (e.key === "-" || e.key === "_" || (e.shiftKey && e.key === "-"))
-      ) {
-        e.preventDefault();
-        const newFontSize = Math.max(fontSize - 2, 8);
-        setFontSize(newFontSize);
-        if (editorRef.current) {
-          editorRef.current.updateOptions({ fontSize: newFontSize });
-        }
-      }
-
-      // Reset Zoom: CMD/CTRL + 0
-      if ((e.metaKey || e.ctrlKey) && e.key === "0") {
-        e.preventDefault();
-        setFontSize(14);
-        if (editorRef.current) {
-          editorRef.current.updateOptions({ fontSize: 14 });
-        }
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fontSize, openFile, fileContents, handleSave, editorRef]);
 
   return (
     <div className="flex flex-col h-full bg-[#171717] overflow-hidden">
