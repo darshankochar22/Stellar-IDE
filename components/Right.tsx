@@ -301,72 +301,12 @@ export default function Right({
   }, []);
 
   // ============================================================================
-  // DEPLOY CONTRACT - UPDATED TO LOG VM OUTPUT
+  // DEPLOY CONTRACT (ARCHIVED)
   // ============================================================================
-  {
-    /* 
-  const handleDeployContract = async () => {
-    if (!publicKey) {
-      logToTerminal('✗ Wallet not connected. Please connect your Freighter wallet first.', 'error');
-      setError('Wallet not connected');
-      return;
-    }
-
-    setContractLoading(true);
-    setError(null);
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal('Starting contract deployment...', 'info');
-    logToTerminal(`Using account: ${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`, 'info');
-    
-    try {
-      const response = await fetch('/api/docker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'deployContract', userId, publicKey })
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        logToTerminal('✓ Contract deployed successfully!', 'log');
-        logToTerminal('=== Deployment Output ===', 'info');
-        
-        // Log all output from the VM
-        const output = data.output || data.stdout || '';
-        const errorOutput = data.stderr || '';
-        
-        if (output) {
-          output.split('\n').forEach((line: string) => {
-            if (line.trim()) logToTerminal(line, 'log');
-          });
-        }
-        
-        if (errorOutput) {
-          errorOutput.split('\n').forEach((line: string) => {
-            if (line.trim()) logToTerminal(line, 'warn');
-          });
-        }
-      } else {
-        logToTerminal('✗ Deployment failed', 'error');
-        logToTerminal(`Error: ${data.error}`, 'error');
-        
-        const errorDetails = data.output || data.stderr || '';
-        if (errorDetails) {
-          errorDetails.split('\n').forEach((line: string) => {
-            if (line.trim()) logToTerminal(line, 'error');
-          });
-        }
-        
-        setError(`Failed to deploy contract: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to deploy contract: ${error}`, 'error');
-      setError('Failed to deploy contract');
-    } finally {
-      setContractLoading(false);
-    }
-  }
-  */
-  }
+  // Moved to: hooks/archived/useContractDeployment.ts
+  // Status: Disabled - Awaiting backend API support
+  // To enable: Import useContractDeployment hook and call it with userId, publicKey, etc.
+  // Reference: See hooks/archived/README.md for implementation details
 
   function handleEditorChange(value: string | undefined) {
     if (openFile && value !== undefined) {
@@ -383,58 +323,12 @@ export default function Right({
   }
 
   // ============================================================================
-  // CREATE ACCOUNT - UPDATED TO LOG TO TERMINAL
+  // CREATE ACCOUNT (ARCHIVED)
   // ============================================================================
-  {
-    /*
-  async function handleCreateAccount() {
-    setAccountLoading(true);
-    setError(null);
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal('Creating Stellar account...', 'info');
-
-    try {
-      const response = await fetch('/api/docker', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'createAccount', userId })
-      });
-      const data = await response.json();
-      if (data.success) {
-        logToTerminal('✓ Account created successfully!', 'log');
-        
-        // Log stdout from VM
-        if (data.stdout) {
-          data.stdout.split('\n').forEach((line: string) => {
-            if (line.trim()) logToTerminal(line, 'log');
-          });
-        }
-        
-        // Log stderr from VM as warnings
-        if (data.stderr) {
-          data.stderr.split('\n').forEach((line: string) => {
-            if (line.trim()) logToTerminal(line, 'warn');
-          });
-        }
-        
-        // Log backup message
-        if (data.message) {
-          logToTerminal(`✓ ${data.message}`, 'log');
-        }
-        logToTerminal('✓ Credentials backed up to soroban-hello-world/.config', 'log');
-      } else {
-        logToTerminal(`✗ Failed to create account: ${data.error}`, 'error');
-        setError(`Failed to create account: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to create account: ${error}`, 'error');
-      setError('Failed to create account');
-    } finally {
-      setAccountLoading(false);
-    }
-  }
-*/
-  }
+  // Moved to: hooks/archived/useAccountCreation.ts
+  // Status: Disabled - Awaiting backend API support
+  // To enable: Import useAccountCreation hook and call it with userId, logToTerminal, etc.
+  // Reference: See hooks/archived/README.md for implementation details
 
   return (
     <div className="flex flex-col h-full bg-[#171717] overflow-hidden">
