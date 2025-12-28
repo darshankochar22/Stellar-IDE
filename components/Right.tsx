@@ -11,6 +11,7 @@ import { useWallet } from "../hooks/useWallet";
 import { useFileManager } from "../hooks/useFileManager";
 import { useMonacoSetup } from "../hooks/useMonacoSetup";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useContainerManagement } from "../hooks/useContainerManagement";
 
 type FileNode = {
   name: string;
@@ -118,6 +119,22 @@ export default function Right({
     onFontSizeChange: setFontSize,
     editorRef,
   });
+
+  // Container Management hook
+  const { handleCreateContainer, handleDeleteContainer } =
+    useContainerManagement({
+      userId,
+      logToTerminal,
+      onContainerLoading: setContainerLoading,
+      onError: setError,
+      onTerminalOpen: setTerminalOpen,
+      onLoadFiles: loadFiles,
+      onClearFiles: () => {
+        setFiles([]);
+        setOpenFile(null);
+        setFileContents(new Map());
+      },
+    });
 
   // ============================================================================
   // SIDEBAR RESIZING
@@ -362,86 +379,6 @@ export default function Right({
           f.path === openFile.path ? { ...f, isDirty: true } : f
         )
       );
-    }
-  }
-
-  // ============================================================================
-  // CREATE CONTAINER - UPDATED TO LOG TO TERMINAL
-  // ============================================================================
-  async function handleCreateContainer() {
-    setContainerLoading(true);
-    setError(null);
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal("Creating Docker container...", "info");
-
-    try {
-      const response = await fetch("/api/docker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", userId }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        logToTerminal(`✓ ${data.message}`, "log");
-
-        // Log any setup output
-        if (data.output) {
-          data.output.split("\n").forEach((line: string) => {
-            if (line.trim()) logToTerminal(line, "log");
-          });
-        }
-
-        await loadFiles();
-      } else {
-        logToTerminal(`✗ Failed to create container: ${data.error}`, "error");
-        setError(`Failed to create container: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to create container: ${error}`, "error");
-      setError("Failed to create container");
-    } finally {
-      setContainerLoading(false);
-    }
-  }
-
-  // ============================================================================
-  // DELETE CONTAINER - UPDATED TO LOG TO TERMINAL
-  // ============================================================================
-  async function handleDeleteContainer() {
-    if (!confirm(`Delete container for user ${userId}?`)) {
-      return;
-    }
-
-    setContainerLoading(true);
-    setError(null);
-    setTerminalOpen(true); // Auto-open terminal
-    logToTerminal("Deleting Docker container...", "info");
-
-    try {
-      const response = await fetch("/api/docker", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", userId }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        logToTerminal(`✓ ${data.message}`, "log");
-        setFiles([]);
-        setOpenFile(null);
-        setFileContents(new Map());
-      } else {
-        logToTerminal(`✗ Failed to delete container: ${data.error}`, "error");
-        setError(`Failed to delete container: ${data.error}`);
-      }
-    } catch (error) {
-      logToTerminal(`✗ Failed to delete container: ${error}`, "error");
-      setError("Failed to delete container");
-    } finally {
-      setContainerLoading(false);
     }
   }
 
