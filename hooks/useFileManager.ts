@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useFileTree } from "./useFileTree";
 import { useFileCache } from "./useFileCache";
 import { useFileCreation } from "./useFileCreation";
@@ -142,13 +142,19 @@ export function useFileManager(
     [deleteFolderImpl, openFile, loadFilesWrapper, setOpenFile, setExpandedFolders]
   );
 
-  // Load files on mount
+  // Load files on mount (only once per userId)
+  const hasInitialized = useRef(false);
+  
   useEffect(() => {
+    if (hasInitialized.current) return;
+    
+    hasInitialized.current = true;
+    
     const initializeFiles = async () => {
       await loadFilesWrapper(false);
     };
     initializeFiles();
-  }, [loadFilesWrapper, userId]);
+  }, [userId, loadFilesWrapper]);
 
   return {
     files,
