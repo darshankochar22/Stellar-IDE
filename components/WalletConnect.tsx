@@ -8,24 +8,12 @@ import {
   Check,
   Eye,
   EyeOff,
-  Send,
   ArrowDownLeft,
   ArrowUpRight,
   Repeat2,
   AlertCircle,
 } from "lucide-react";
-import {
-  signTransaction,
-  isConnected,
-  setAllowed,
-  getAddress,
-} from "@stellar/freighter-api";
-
-interface WalletInfo {
-  publicKey: string;
-  network: string;
-  balance?: string;
-}
+import { isConnected, setAllowed, getAddress } from "@stellar/freighter-api";
 
 interface Transaction {
   id: string;
@@ -37,13 +25,30 @@ interface Transaction {
   status: "completed" | "pending";
 }
 
-export function WalletConnect() {
-  const [isConnectedState, setIsConnectedState] = useState(false);
-  const [walletInfo, setWalletInfo] = useState<WalletInfo | null>(null);
+interface WalletConnectProps {
+  isConnected?: boolean;
+  walletAddress?: string | null;
+  walletBalance?: string;
+  onConnect?: (address: string, balance: string) => void;
+  onDisconnect?: () => void;
+}
+
+export function WalletConnect({
+  isConnected: externalIsConnected,
+  walletAddress: externalWalletAddress,
+  walletBalance: externalWalletBalance,
+  onConnect,
+  onDisconnect,
+}: WalletConnectProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [showFullKey, setShowFullKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Use external state if provided, otherwise use internal state
+  const isConnectedState = externalIsConnected ?? false;
+  const walletAddressState = externalWalletAddress;
+  const walletBalanceState = externalWalletBalance ?? "0.00";
 
   // Mock transactions
   const [transactions] = useState<Transaction[]>([
@@ -83,7 +88,8 @@ export function WalletConnect() {
       }
       const data = await response.json();
       const nativeBalance = data.balances.find(
-        (b: any) => b.asset_type === "native"
+        (b: { asset_type: string; balance: string }) =>
+          b.asset_type === "native"
       );
       return nativeBalance ? nativeBalance.balance : "0.00";
     } catch (error) {
@@ -121,12 +127,10 @@ export function WalletConnect() {
       // Fetch real balance from Stellar network
       const balance = await fetchBalance(walletAddress);
 
-      setWalletInfo({
-        publicKey: walletAddress,
-        network: "testnet",
-        balance: balance,
-      });
-      setIsConnectedState(true);
+      // Call the onConnect callback if provided
+      if (onConnect) {
+        onConnect(walletAddress, balance);
+      }
     } catch (error: any) {
       console.error("Wallet connection error:", error);
       setError(error.message || "Failed to connect wallet. Please try again.");
@@ -136,15 +140,17 @@ export function WalletConnect() {
   };
 
   const handleDisconnect = () => {
-    setIsConnectedState(false);
-    setWalletInfo(null);
     setShowFullKey(false);
     setError(null);
+    // Call the onDisconnect callback if provided
+    if (onDisconnect) {
+      onDisconnect();
+    }
   };
 
   const handleCopyKey = async () => {
-    if (walletInfo) {
-      await navigator.clipboard.writeText(walletInfo.publicKey);
+    if (walletAddressState) {
+      await navigator.clipboard.writeText(walletAddressState);
       setCopiedKey(true);
       setTimeout(() => setCopiedKey(false), 2000);
     }
@@ -160,7 +166,7 @@ export function WalletConnect() {
         <button
           onClick={handleConnect}
           disabled={isConnecting}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black hover:bg-gray-200 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-black border border-white/10 text-white hover:bg-white/5 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
         >
           <Wallet size={16} />
           {isConnecting ? "Connecting..." : "Connect Wallet"}
@@ -168,10 +174,7 @@ export function WalletConnect() {
         {error && (
           <div className="absolute top-16 right-0 w-96 bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
             <div className="flex items-start gap-2">
-              <AlertCircle
-                size={16}
-                className="text-red-400 flex-shrink-0 mt-0.5"
-              />
+              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
               <p className="text-red-300 text-xs">{error}</p>
             </div>
           </div>
@@ -200,13 +203,13 @@ export function WalletConnect() {
       {/* Content */}
       <div className="p-6 space-y-5">
         {/* Balance Card */}
-        <div className="bg-white/[0.02] rounded-xl p-4 border border-white/5">
+        <div className="bg-white/2 rounded-xl p-4 border border-white/5">
           <p className="text-gray-500 text-xs uppercase tracking-widest mb-2 font-semibold">
             Balance
           </p>
           <div className="flex items-baseline gap-2">
             <h2 className="text-2xl font-bold text-white">
-              {walletInfo?.balance}
+              {walletBalanceState}
             </h2>
             <span className="text-gray-400 text-sm">XLM</span>
           </div>
@@ -229,7 +232,7 @@ export function WalletConnect() {
         </div>
 
         {/* Public Key Section */}
-        <div className="bg-white/[0.02] rounded-xl p-4 border border-white/5">
+        <div className="bg-white/2 rounded-xl p-4 border border-white/5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold">
               Public Key
@@ -245,8 +248,8 @@ export function WalletConnect() {
           <div className="flex items-center gap-2 bg-black/40 rounded-lg px-3 py-2">
             <p className="text-gray-300 text-xs font-mono flex-1 truncate">
               {showFullKey
-                ? walletInfo?.publicKey
-                : truncateKey(walletInfo?.publicKey || "")}
+                ? walletAddressState
+                : truncateKey(walletAddressState || "")}
             </p>
             <button
               onClick={handleCopyKey}
@@ -263,7 +266,7 @@ export function WalletConnect() {
         </div>
 
         {/* Transaction History */}
-        <div className="bg-white/[0.02] rounded-xl p-4 border border-white/5">
+        <div className="bg-white/2 rounded-xl p-4 border border-white/5">
           <div className="flex items-center justify-between mb-3">
             <p className="text-gray-500 text-xs uppercase tracking-widest font-semibold">
               Recent Activity
@@ -299,14 +302,13 @@ export function WalletConnect() {
                     <p className="text-gray-600 text-xs">{tx.timestamp}</p>
                   </div>
                 </div>
-                <p className="text-gray-300 text-xs font-mono flex-shrink-0 ml-2">
+                <p className="text-gray-300 text-xs font-mono shrink-0 ml-2">
                   {tx.amount}
                 </p>
               </div>
             ))}
           </div>
         </div>
-
       </div>
 
       {/* Footer */}

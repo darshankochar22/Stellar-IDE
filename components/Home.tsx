@@ -32,6 +32,9 @@ const HomeComponent = () => {
   const [promptValue, setPromptValue] = useState("");
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [walletVisible, setWalletVisible] = useState(true);
+  const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string>("0.00");
 
   const loadProjects = useCallback(async () => {
     try {
@@ -124,7 +127,23 @@ const HomeComponent = () => {
 
       {/* Top Bar with Wallet and Toggle Button */}
       <div className="absolute top-0 right-0 z-30 p-4 flex items-start gap-4">
-        {walletVisible && <WalletConnect />}
+        {walletVisible && (
+          <WalletConnect
+            isConnected={isWalletConnected}
+            walletAddress={walletAddress}
+            walletBalance={walletBalance}
+            onConnect={(address, balance) => {
+              setWalletAddress(address);
+              setWalletBalance(balance);
+              setIsWalletConnected(true);
+            }}
+            onDisconnect={() => {
+              setWalletAddress(null);
+              setWalletBalance("0.00");
+              setIsWalletConnected(false);
+            }}
+          />
+        )}
         <button
           onClick={() => setWalletVisible(!walletVisible)}
           className="p-2 hover:bg-white/10 rounded-lg transition-all text-gray-500 hover:text-white"
