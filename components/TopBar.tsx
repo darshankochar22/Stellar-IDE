@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Copy, Check } from "lucide-react";
 import { DeployButton } from "./DeployButton";
+import { BuildButton } from "./BuildButton";
 import ToggleButtons from "./ToggleButtons";
 
 interface TopBarProps {
@@ -48,6 +50,20 @@ export default function TopBar({
   onToggleLeftComponent,
   onLog,
 }: TopBarProps) {
+  const [copied, setCopied] = useState(false);
+
+  const truncateAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const handleCopyAddress = async () => {
+    if (userId) {
+      await navigator.clipboard.writeText(userId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <div className="h-10 bg-[#171717] border-b border-[#252525] flex items-center justify-between px-3">
       <div className="flex items-center gap-3">
@@ -64,7 +80,20 @@ export default function TopBar({
           </Link>
         )}
 
-        <span className="text-xs text-gray-500">User: {userId}</span>
+        {userId && (
+          <button
+            onClick={handleCopyAddress}
+            className="text-xs text-gray-500 hover:text-white hover:bg-white/10 px-2 py-1 rounded transition-all flex items-center gap-1"
+            title="Click to copy wallet address"
+          >
+            <span>Wallet: {truncateAddress(userId)}</span>
+            {copied ? (
+              <Check size={14} className="text-green-400" />
+            ) : (
+              <Copy size={14} />
+            )}
+          </button>
+        )}
 
         {/* Wallet connection button - commented out, handle in home page only */}
         {/* {connected ? (
@@ -116,6 +145,7 @@ export default function TopBar({
           {containerLoading ? "Loading..." : "Delete Container"}
         </button> */}
 
+        <BuildButton onLog={onLog} projectName={projectName} userId={userId} />
         <DeployButton onLog={onLog} projectName={projectName} />
       </div>
 
