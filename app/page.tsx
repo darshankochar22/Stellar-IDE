@@ -1,9 +1,9 @@
-import HomeComponent from "../components/Home";
+import CursorLandingPage from "../components/Landingpage";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen font-sans dark:bg-black bg-black">
-      <HomeComponent />
+    <div className="font-sans  dark:bg-black bg-black">
+      <CursorLandingPage />
     </div>
   );
 }

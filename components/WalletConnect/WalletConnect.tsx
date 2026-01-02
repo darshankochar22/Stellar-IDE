@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Wallet, AlertCircle } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { useWalletConnection } from "@/hooks/useWalletConnection";
@@ -21,16 +21,28 @@ export function WalletConnect({
   onDisconnect,
 }: WalletConnectProps) {
   const walletContext = useWallet();
-  const { isConnecting, error, handleConnect, handleDisconnect, setError } =
+  const { isConnecting, error, handleConnect, handleDisconnect } =
     useWalletConnection();
-  const [isHydrated] = useState(true);
 
-  const isConnectedState =
-    walletContext?.isConnected ?? externalIsConnected ?? false;
-  const walletAddressState =
-    walletContext?.walletAddress ?? externalWalletAddress;
+
+  const [mounted,setMounted] = useState(() => typeof window !== "undefined");
 
   const { balance } = useWalletBalance(externalWalletBalance);
+
+  const isConnected =
+    walletContext?.isConnected ?? externalIsConnected ?? false;
+
+  const walletAddress =
+    walletContext?.walletAddress ?? externalWalletAddress;
+
+  if (!mounted) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 bg-black border border-white/10 text-white rounded-lg">
+        <Wallet size={16} className="animate-pulse" />
+        <span className="text-sm">Loading wallet...</span>
+      </div>
+    );
+  }
 
   const mockTransactions: Transaction[] = [
     {
@@ -60,30 +72,19 @@ export function WalletConnect({
 
   const handleDisconnectClick = () => {
     handleDisconnect();
-    if (onDisconnect) {
-      onDisconnect();
-    }
+    onDisconnect?.();
   };
 
   const handleConnectClick = async () => {
     await handleConnect();
-    if (onConnect && walletAddressState) {
-      onConnect(walletAddressState, balance);
+    if (onConnect && walletAddress) {
+      onConnect(walletAddress, balance);
     }
   };
 
-  if (!isHydrated) {
+  if (!isConnected) {
     return (
-      <div className="flex items-center gap-2 px-4 py-2 bg-black border border-white/10 text-white rounded-lg">
-        <Wallet size={16} className="animate-pulse" />
-        <span className="text-sm">Loading wallet...</span>
-      </div>
-    );
-  }
-
-  if (!isConnectedState) {
-    return (
-      <div>
+      <div className="relative">
         <button
           onClick={handleConnectClick}
           disabled={isConnecting}
@@ -92,8 +93,9 @@ export function WalletConnect({
           <Wallet size={16} />
           {isConnecting ? "Connecting..." : "Connect Wallet"}
         </button>
+
         {error && (
-          <div className="absolute top-16 right-0 w-96 bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
+          <div className="absolute top-14 right-0 w-96 bg-red-500/10 border border-red-500/30 rounded-lg p-3 mt-2">
             <div className="flex items-start gap-2">
               <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
               <p className="text-red-300 text-xs">{error}</p>
@@ -111,7 +113,7 @@ export function WalletConnect({
       <div className="p-6 space-y-5">
         <WalletBalance balance={balance} />
         <ActionButtons />
-        <PublicKeyDisplay walletAddress={walletAddressState} />
+        <PublicKeyDisplay walletAddress={walletAddress} />
         <TransactionHistory transactions={mockTransactions} />
       </div>
 

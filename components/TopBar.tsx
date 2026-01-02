@@ -69,7 +69,7 @@ export default function TopBar({
       <div className="flex items-center gap-3">
         {/* Back button and Project name */}
         {projectName && (
-          <Link href="/">
+          <Link href="/home">
             <button
               className="text-xs px-2 py-1 rounded hover:bg-[#2a2a2a] text-gray-400 hover:text-white transition-colors flex items-center gap-2"
               title="Back to projects"

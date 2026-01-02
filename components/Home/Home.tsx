@@ -6,7 +6,6 @@ import { useProjectManagement } from "@/hooks/useProjectManagement";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { HeroSection } from "./HeroSection";
-import { RecentProjects } from "./RecentProjects";
 
 export function Home() {
   const wallet = useWallet();
@@ -53,7 +52,7 @@ export function Home() {
   };
 
   return (
-    <div className="w-full h-screen bg-black flex flex-col relative overflow-hidden">
+    <div className="w-full h-screen dark:bg-black bg-black flex flex-col relative overflow-hidden">
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-size-[64px_64px]"></div>
 
       <TopBar
@@ -88,13 +87,13 @@ export function Home() {
           onKeyPress={handleKeyPress}
         />
 
-        <div className="flex-1 flex flex-col items-center justify-center px-8 py-8 w-full">
-          <div className="w-full max-w-3xl">
+        <div className="flex-1 flex flex-col items-center justify-center px-12 py-8 w-full">
+          <div className="w-full max-w-5xl">
             <HeroSection
               promptValue={promptValue}
               onPromptChange={setPromptValue}
             />
-            <RecentProjects projects={projects} />
+          {/*  <RecentProjects projects={projects} /> */}
           </div>
         </div>
       </div>
