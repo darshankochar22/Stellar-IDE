@@ -212,7 +212,7 @@ export default function Right({
         terminalVisible={terminalVisible}
         leftComponentVisible={leftComponentVisible}
         projectName={projectName}
-        onConnectWallet={() => {}}
+        onConnectWallet={async () => {}}
         onDisconnectWallet={() => wallet.disconnect()}
         onSave={handleSave}
         onCreateContainer={handleCreateContainer}
