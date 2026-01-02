@@ -433,19 +433,6 @@ const HomeComponent = () => {
                 </div>
               </div>
             )}
-
-            {/* Empty State CTA */}
-            {projects.length === 0 && (
-              <div className="text-center">
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-white hover:bg-gray-200 text-black rounded-xl transition-all duration-200 font-semibold hover:scale-105"
-                >
-                  <Plus size={20} />
-                  Create Your First Project
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
