@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Wallet,
   LogOut,
@@ -45,6 +45,7 @@ export function WalletConnect({
   const [copiedKey, setCopiedKey] = useState(false);
   const [showFullKey, setShowFullKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Get wallet context
   const walletContext = useWallet();
@@ -56,6 +57,11 @@ export function WalletConnect({
     walletContext?.walletAddress ?? externalWalletAddress;
   const walletBalanceState =
     walletContext?.walletBalance ?? externalWalletBalance ?? "0.00";
+
+  // Prevent hydration mismatch by not rendering until client is hydrated
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Mock transactions
   const [transactions] = useState<Transaction[]>([
@@ -230,6 +236,16 @@ export function WalletConnect({
   const truncateKey = (key: string) => {
     return `${key.slice(0, 6)}...${key.slice(-6)}`;
   };
+
+  // Prevent hydration mismatch - render nothing until hydrated
+  if (!isHydrated) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 bg-black border border-white/10 text-white rounded-lg">
+        <Wallet size={16} className="animate-pulse" />
+        <span className="text-sm">Loading wallet...</span>
+      </div>
+    );
+  }
 
   if (!isConnectedState) {
     return (
