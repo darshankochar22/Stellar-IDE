@@ -6,7 +6,7 @@ import Sidebar from "./Sidebar";
 import EditorPanel from "./EditorPanel";
 import TopBar from "./TopBar";
 import ErrorBanner from "./ErrorBanner";
-import { useWallet } from "../hooks/useWallet";
+import { useWallet as useWalletContext } from "../context/WalletContext";
 import { useFileManager } from "../hooks/useFileManager";
 import { useMonacoSetup } from "../hooks/useMonacoSetup";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -45,7 +45,6 @@ export default function Right({
 }: RightProps) {
   const [fontSize, setFontSize] = useState(14);
   const [containerLoading, setContainerLoading] = useState(false);
-  const [userId] = useState("1");
   const [error, setError] = useState<string | null>(null);
   const [terminalOpen, setTerminalOpen] = useState(terminalVisible);
   const [logs, setLogs] = useState<LogMessage[]>([]);
@@ -64,11 +63,10 @@ export default function Right({
     maxWidth: 600,
   });
 
-  // Wallet hook
-  const { connected, publicKey, connectWallet, disconnectWallet } =
-    useWallet(logToTerminal);
+  // Get wallet from global context
+  const wallet = useWalletContext();
 
-  // File Manager hook
+  // File Manager hook - only initialize if wallet is connected
   const {
     files,
     openFile,
@@ -93,12 +91,14 @@ export default function Right({
     setFileContents,
     setFiles,
   } = useFileManager(
-    userId,
+    wallet.walletAddress || "not-connected",
     logToTerminal,
     setError,
     setTerminalOpen,
     projectName
   );
+
+  // Files auto-load via useFileManager when wallet is connected
 
   // Monaco Editor Setup hook
   const { editorRef, handleEditorDidMount } = useMonacoSetup({
@@ -135,7 +135,7 @@ export default function Right({
   // Container Management hook
   const { handleCreateContainer, handleDeleteContainer } =
     useContainerManagement({
-      userId,
+      userId: wallet.walletAddress || "not-connected",
       logToTerminal,
       onContainerLoading: setContainerLoading,
       onError: setError,
@@ -196,10 +196,15 @@ export default function Right({
 
   return (
     <div className="flex flex-col h-full bg-[#171717] overflow-hidden">
+      {!wallet.isConnected && (
+        <div className="bg-red-900/20 border-b border-red-500/30 p-3 text-red-300 text-sm">
+          Please connect your wallet to access the editor
+        </div>
+      )}
       <TopBar
-        userId={userId}
-        connected={connected}
-        publicKey={publicKey}
+        userId={wallet.walletAddress || ""}
+        connected={wallet.isConnected}
+        publicKey={wallet.walletAddress}
         isSaving={isSaving}
         containerLoading={containerLoading}
         openFile={openFile}
@@ -207,8 +212,8 @@ export default function Right({
         terminalVisible={terminalVisible}
         leftComponentVisible={leftComponentVisible}
         projectName={projectName}
-        onConnectWallet={connectWallet}
-        onDisconnectWallet={disconnectWallet}
+        onConnectWallet={() => {}}
+        onDisconnectWallet={() => wallet.disconnect()}
         onSave={handleSave}
         onCreateContainer={handleCreateContainer}
         onDeleteContainer={handleDeleteContainer}
@@ -221,7 +226,17 @@ export default function Right({
       <ErrorBanner error={error} />
 
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Loading overlay when files are loading */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="text-center">
+              <div className="animate-spin w-8 h-8 border-2 border-white/30 border-t-white rounded-full mx-auto mb-3"></div>
+              <p className="text-white text-sm">Loading project files...</p>
+            </div>
+          </div>
+        )}
+
         {/* Sidebar */}
         {sidebarVisible && (
           <Sidebar

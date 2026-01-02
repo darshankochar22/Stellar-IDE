@@ -29,12 +29,15 @@ export function escapeFilePath(path: string): string {
 }
 
 /**
- * Get container name from user ID
- * @param userId The user ID
+ * Get container name from wallet address (public key)
+ * @param walletAddress The Stellar wallet public key
  * @returns Formatted container name
  */
-export function getContainerName(userId: string): string {
-  return `user${userId}`;
+export function getContainerName(walletAddress: string): string {
+  // Use first 10 characters of wallet address and convert to lowercase
+  // Format: soroban-GBUQWP3K... -> soroban-gbuqwp3k
+  const prefix = walletAddress.slice(0, 10).toLowerCase();
+  return `soroban-${prefix}`;
 }
 
 /**

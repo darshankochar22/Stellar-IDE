@@ -59,7 +59,7 @@ export function useFileCache(
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "getFileContent",
-              userId,
+              walletAddress: userId, // userId parameter contains wallet address
               filePath: file.path,
               projectName,
             }),
@@ -101,7 +101,7 @@ export function useFileCache(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "saveFileContent",
-          userId,
+          walletAddress: userId, // userId parameter contains wallet address
           filePath: openFile.path,
           content,
           projectName,

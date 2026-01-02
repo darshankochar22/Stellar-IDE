@@ -16,9 +16,9 @@ export interface Project {
 /**
  * Get all projects by listing folders in workspace
  */
-export async function getAllProjects(userId: string): Promise<Project[]> {
+export async function getAllProjects(walletAddress: string): Promise<Project[]> {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const projectPath = getWorkspacePath();
     
     // List all directories in workspace
@@ -51,14 +51,14 @@ export async function getAllProjects(userId: string): Promise<Project[]> {
  * Create a new project using stellar contract init
  */
 export async function createProject(
-  userId: string,
+  walletAddress: string,
   projectName: string,
   description?: string
 ): Promise<{ success: boolean; project?: Project; error?: string }> {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const projectPath = getWorkspacePath();
-    const projects = await getAllProjects(userId);
+    const projects = await getAllProjects(walletAddress);
     
     // Check if project already exists
     if (projects.some(p => p.name === projectName)) {
@@ -90,11 +90,11 @@ export async function createProject(
  * Delete a project folder
  */
 export async function deleteProject(
-  userId: string,
+  walletAddress: string,
   projectName: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const projectPath = getWorkspacePath();
 
     // Delete project folder
@@ -111,11 +111,11 @@ export async function deleteProject(
  * Get project details
  */
 export async function getProject(
-  userId: string,
+  walletAddress: string,
   projectName: string
 ): Promise<{ success: boolean; project?: Project; error?: string }> {
   try {
-    const projects = await getAllProjects(userId);
+    const projects = await getAllProjects(walletAddress);
     const project = projects.find(p => p.name === projectName);
 
     if (!project) {
@@ -132,14 +132,14 @@ export async function getProject(
  * Rename a project folder
  */
 export async function renameProject(
-  userId: string,
+  walletAddress: string,
   oldName: string,
   newName: string
 ): Promise<{ success: boolean; project?: Project; error?: string }> {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const projectPath = getWorkspacePath();
-    const projects = await getAllProjects(userId);
+    const projects = await getAllProjects(walletAddress);
 
     const project = projects.find(p => p.name === oldName);
     if (!project) {

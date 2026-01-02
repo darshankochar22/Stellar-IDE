@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { WalletConnect } from "./WalletConnect";
+import { useWallet } from "@/context/WalletContext";
 
 interface Project {
   id: string;
@@ -22,27 +23,57 @@ interface Project {
 }
 
 const HomeComponent = () => {
+  const wallet = useWallet();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [userId] = useState("1");
   const [promptValue, setPromptValue] = useState("");
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [walletVisible, setWalletVisible] = useState(true);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [walletBalance, setWalletBalance] = useState<string>("0.00");
 
   const loadProjects = useCallback(async () => {
+    if (!wallet.walletAddress) {
+      setProjects([]);
+      return;
+    }
     try {
       setIsLoading(true);
+
+      // First, ensure container is healthy and ready
+      const containerHealthResponse = await fetch("/api/docker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "checkHealth",
+          walletAddress: wallet.walletAddress,
+        }),
+      });
+      const healthData = await containerHealthResponse.json();
+      if (!healthData.isHealthy) {
+        console.warn("Container not healthy, attempting to recreate...");
+        // Try to recreate the container
+        await fetch("/api/docker", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "create",
+            walletAddress: wallet.walletAddress,
+          }),
+        });
+        wallet.setContainerReady(true);
+      }
+
+      // Now load projects
       const response = await fetch("/api/docker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "getAllProjects", userId }),
+        body: JSON.stringify({
+          action: "getAllProjects",
+          walletAddress: wallet.walletAddress,
+        }),
       });
       const data = await response.json();
       setProjects(data.projects || []);
@@ -51,14 +82,19 @@ const HomeComponent = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [wallet.walletAddress, wallet]);
 
   useEffect(() => {
+    // Load projects when wallet address changes
     loadProjects();
   }, [loadProjects]);
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
+    if (!wallet.walletAddress) {
+      alert("Please connect your wallet first");
+      return;
+    }
 
     try {
       setIsCreating(true);
@@ -67,7 +103,7 @@ const HomeComponent = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "createProject",
-          userId,
+          walletAddress: wallet.walletAddress,
           projectName: newProjectName,
           description: newProjectDesc,
         }),
@@ -91,6 +127,10 @@ const HomeComponent = () => {
 
   const handleDeleteProject = async (projectName: string) => {
     if (!confirm(`Delete project "${projectName}"?`)) return;
+    if (!wallet.walletAddress) {
+      alert("Please connect your wallet first");
+      return;
+    }
 
     try {
       const response = await fetch("/api/docker", {
@@ -98,7 +138,7 @@ const HomeComponent = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "deleteProject",
-          userId,
+          walletAddress: wallet.walletAddress,
           projectName,
         }),
       });
@@ -129,18 +169,14 @@ const HomeComponent = () => {
       <div className="absolute top-0 right-0 z-30 p-4 flex items-start gap-4">
         {walletVisible && (
           <WalletConnect
-            isConnected={isWalletConnected}
-            walletAddress={walletAddress}
-            walletBalance={walletBalance}
+            isConnected={wallet.isConnected}
+            walletAddress={wallet.walletAddress}
+            walletBalance={wallet.walletBalance}
             onConnect={(address, balance) => {
-              setWalletAddress(address);
-              setWalletBalance(balance);
-              setIsWalletConnected(true);
+              wallet.connect(address, balance);
             }}
             onDisconnect={() => {
-              setWalletAddress(null);
-              setWalletBalance("0.00");
-              setIsWalletConnected(false);
+              wallet.disconnect();
             }}
           />
         )}

@@ -47,7 +47,7 @@ export function useFileOperations(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             action: "getFiles", 
-            userId,
+            walletAddress: userId, // userId parameter contains wallet address
             projectName: projectNameParam || projectName
           }),
         });
@@ -103,7 +103,7 @@ export function useFileOperations(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "deleteFile",
-            userId,
+            walletAddress: userId, // userId parameter contains wallet address
             filePath,
             projectName,
           }),
@@ -163,7 +163,7 @@ export function useFileOperations(
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "deleteFolder",
-            userId,
+            walletAddress: userId, // userId parameter contains wallet address
             filePath: folderPath,
             projectName,
           }),

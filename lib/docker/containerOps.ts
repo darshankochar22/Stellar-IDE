@@ -13,37 +13,71 @@ import {
 
 /**
  * Create and initialize a new Docker container
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @returns Container creation result
  */
-export async function createAndInitializeContainer(userId: string) {
+export async function createAndInitializeContainer(walletAddress: string) {
   try {
-    const containerName = getContainerName(userId);
-    console.log(`Creating container: ${containerName}`);
+    const containerName = getContainerName(walletAddress);
+    console.log(`Setting up container: ${containerName}`);
 
-    // Check if container already exists
+    // Check if container already exists and is running
+    let containerExists = false;
+    let containerRunning = false;
     try {
       const { stdout: checkExists } = await execAsync(
         `docker ps -a --filter name=^${containerName}$ --format "{{.Names}}"`
       );
-      if (checkExists.trim() === containerName) {
-        console.log(`Container ${containerName} already exists, removing it first`);
-        await deleteContainer(userId);
-        // Wait for cleanup
-        await sleep(500);
+      containerExists = checkExists.trim() === containerName;
+      
+      if (containerExists) {
+        // Check if it's running
+        const { stdout: statusCheck } = await execAsync(
+          `docker inspect -f '{{.State.Running}}' ${containerName}`
+        );
+        containerRunning = statusCheck.trim() === 'true';
+        
+        if (containerRunning) {
+          console.log(`Container ${containerName} already exists and is running. Reusing it.`);
+          
+          // Just verify contract exists, don't reinitialize
+          const { stdout: verifyDir } = await execAsync(
+            `docker exec ${containerName} test -d ${getWorkspacePath()}/soroban-hello-world && echo "exists" || echo "missing"`
+          );
+          
+          if (verifyDir.trim() === 'exists') {
+            return {
+              success: true,
+              containerName,
+              message: `Container ${containerName} already exists and is ready`,
+            };
+          } else {
+            console.log(`Contract directory missing, reinitializing...`);
+          }
+        } else {
+          // Container exists but not running, start it
+          console.log(`Container ${containerName} exists but is stopped. Starting it...`);
+          await execAsync(`docker start ${containerName}`);
+          await sleep(2000);
+          containerRunning = true;
+        }
       }
     } catch (error) {
-      // Container doesn't exist, continue
+      console.log('Container check error, will create new one:', error);
+      containerExists = false;
     }
 
-    // Run container with STELLAR_HOME set to workspace for credential storage
-    const { stdout: createOutput } = await execAsync(
-      `docker run -d --name ${containerName} -e STELLAR_HOME=/home/developer/workspace/.stellar stellar-sandbox:v1 tail -f /dev/null`
-    );
-    console.log('Container created:', createOutput.trim());
+    // If container doesn't exist, create it
+    if (!containerExists) {
+      console.log(`Creating new container: ${containerName}`);
+      const { stdout: createOutput } = await execAsync(
+        `docker run -d --name ${containerName} -e STELLAR_HOME=/home/developer/workspace/.stellar stellar-sandbox:v1 tail -f /dev/null`
+      );
+      console.log('Container created:', createOutput.trim());
 
-    // Wait for container to be fully ready
-    await sleep(2000);
+      // Wait for container to be fully ready
+      await sleep(2000);
+    }
 
     // Verify container is running
     const { stdout: statusCheck } = await execAsync(
@@ -72,6 +106,7 @@ export async function createAndInitializeContainer(userId: string) {
       if (!initError.message.includes('already exists')) {
         throw initError;
       }
+      console.log('Contract already initialized, continuing...');
     }
 
     // Verify the directory was created
@@ -86,7 +121,7 @@ export async function createAndInitializeContainer(userId: string) {
     return {
       success: true,
       containerName,
-      message: `Container ${containerName} created and contract initialized`,
+      message: `Container ${containerName} ready for use`,
     };
   } catch (error: any) {
     console.error('Docker error:', error);
@@ -99,12 +134,12 @@ export async function createAndInitializeContainer(userId: string) {
 
 /**
  * Delete a Docker container
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @returns Deletion result
  */
-export async function deleteContainer(userId: string) {
+export async function deleteContainer(walletAddress: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     console.log(`Deleting container: ${containerName}`);
 
     // Stop container (ignore errors if not running)
@@ -138,12 +173,12 @@ export async function deleteContainer(userId: string) {
 
 /**
  * Check if a container is healthy and running
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @returns Health check result
  */
-export async function checkContainerHealth(userId: string): Promise<boolean> {
+export async function checkContainerHealth(walletAddress: string): Promise<boolean> {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const { stdout: statusCheck } = await execAsync(
       `docker inspect -f '{{.State.Running}}' ${containerName}`
     );
@@ -156,13 +191,13 @@ export async function checkContainerHealth(userId: string): Promise<boolean> {
 
 /**
  * Ensure a container is running, throw if not
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @throws Error if container is not running
  */
-export async function ensureContainerRunning(userId: string): Promise<void> {
-  const isRunning = await checkContainerHealth(userId);
+export async function ensureContainerRunning(walletAddress: string): Promise<void> {
+  const isRunning = await checkContainerHealth(walletAddress);
   if (!isRunning) {
-    throw new Error(`Container for user ${userId} is not running`);
+    throw new Error(`Container for wallet ${walletAddress} is not running`);
   }
 }
 

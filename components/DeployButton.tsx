@@ -2,39 +2,32 @@
 
 import { useState } from "react";
 import { deployWithWallet } from "@/lib/wallet-deploy";
+import { useWallet } from "@/context/WalletContext";
 
 interface DeployButtonProps {
-  userId: string;
   onLog: (message: string, type: "log" | "error" | "warn" | "info") => void;
-  isConnected: boolean;
-  onConnectWallet: () => Promise<void>;
   projectName?: string;
 }
 
-export function DeployButton({
-  userId,
-  onLog,
-  isConnected,
-  onConnectWallet,
-  projectName,
-}: DeployButtonProps) {
+export function DeployButton({ onLog, projectName }: DeployButtonProps) {
   const [isDeploying, setIsDeploying] = useState(false);
+  const wallet = useWallet();
 
   const handleDeploy = async () => {
-    if (!userId) {
-      onLog("✗ User ID not found", "error");
+    if (!wallet.walletAddress) {
+      onLog("✗ Wallet address not found", "error");
       return;
     }
 
     // Check wallet connection
-    if (!isConnected) {
+    if (!wallet.isConnected) {
       onLog("Wallet not connected. Connecting...", "warn");
-      await onConnectWallet();
+      await wallet.connect(wallet.walletAddress, wallet.walletBalance);
 
       // Give it a moment
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      if (!isConnected) {
+      if (!wallet.isConnected) {
         onLog("✗ Wallet connection required", "error");
         return;
       }
@@ -44,7 +37,7 @@ export function DeployButton({
 
     try {
       const result = await deployWithWallet(
-        userId,
+        wallet.walletAddress,
         (msg: string, type: string) => {
           onLog(msg, type as "log" | "error" | "warn" | "info");
         },
@@ -57,8 +50,10 @@ export function DeployButton({
       } else {
         onLog(`✗ Deployment failed: ${result.error}`, "error");
       }
-    } catch (error: any) {
-      onLog(`✗ Unexpected error: ${error.message}`, "error");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      onLog(`✗ Unexpected error: ${errorMessage}`, "error");
     } finally {
       setIsDeploying(false);
     }
@@ -67,7 +62,7 @@ export function DeployButton({
   return (
     <button
       onClick={handleDeploy}
-      disabled={isDeploying || !userId}
+      disabled={isDeploying || !wallet.walletAddress}
       className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-800 text-white disabled:opacity-50 transition-colors"
     >
       {isDeploying ? (

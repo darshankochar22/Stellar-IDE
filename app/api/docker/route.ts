@@ -11,7 +11,8 @@ deleteFile,
 deleteFolder,
 createAccount,
 deployContract,
-buildContract
+buildContract,
+checkContainerHealth
 } from '@/lib/docker';
 import {
 getAllProjects,
@@ -23,76 +24,89 @@ renameProject
 
 export async function POST(request: Request) {
 try {
-const { action, userId, filePath, content, publicKey, projectName, description, oldName, newName } = await request.json();
+const { action, walletAddress, filePath, content, publicKey, projectName, description, oldName, newName } = await request.json();
+
+// Validate wallet address is provided
+if (!walletAddress && action !== 'checkHealth') {
+  return NextResponse.json(
+    { error: 'Wallet address is required' },
+    { status: 400 }
+  );
+}
+
 switch (action) {
   case 'create':
-    const createResult = await createAndInitializeContainer(userId);
+    const createResult = await createAndInitializeContainer(walletAddress);
     return NextResponse.json(createResult);
 
   case 'delete':
-    const deleteResult = await deleteContainer(userId);
+    const deleteResult = await deleteContainer(walletAddress);
     return NextResponse.json(deleteResult);
 
   case 'getFiles':
-    const filesResult = await getContainerFiles(userId, projectName);
+    const filesResult = await getContainerFiles(walletAddress, projectName);
     return NextResponse.json(filesResult);
 
   case 'getFileContent':
-    const fileContentResult = await getFileContent(userId, filePath, projectName);
+    const fileContentResult = await getFileContent(walletAddress, filePath, projectName);
     return NextResponse.json(fileContentResult);
 
   case 'saveFileContent':
-    const saveResult = await saveFileContent(userId, filePath, content, projectName);
+    const saveResult = await saveFileContent(walletAddress, filePath, content, projectName);
     return NextResponse.json(saveResult);
 
   case 'createFile':
-    const createFileResult = await createFile(userId, filePath, '', projectName);
+    const createFileResult = await createFile(walletAddress, filePath, '', projectName);
     return NextResponse.json(createFileResult);
 
   case 'createFolder':
-    const createFolderResult = await createFolder(userId, filePath, projectName);
+    const createFolderResult = await createFolder(walletAddress, filePath, projectName);
     return NextResponse.json(createFolderResult);
 
   case 'deleteFile':
-    const deleteFileResult = await deleteFile(userId, filePath, projectName);
+    const deleteFileResult = await deleteFile(walletAddress, filePath, projectName);
     return NextResponse.json(deleteFileResult);
 
   case 'deleteFolder':
-    const deleteFolderResult = await deleteFolder(userId, filePath, projectName);
+    const deleteFolderResult = await deleteFolder(walletAddress, filePath, projectName);
     return NextResponse.json(deleteFolderResult);
   
   case 'createAccount':
-    const createAccountResult = await createAccount(userId);
+    const createAccountResult = await createAccount(walletAddress);
     return NextResponse.json(createAccountResult);
 
   case 'deployContract':
-    const deployContractResult = await deployContract(userId, publicKey, projectName);
+    const deployContractResult = await deployContract(walletAddress, publicKey, projectName);
     return NextResponse.json(deployContractResult);
 
   case 'buildContract':
-    const buildContractResult = await buildContract(userId, projectName);
+    const buildContractResult = await buildContract(walletAddress, projectName);
     return NextResponse.json(buildContractResult);
 
   // Project management endpoints
   case 'getAllProjects':
-    const allProjects = await getAllProjects(userId);
+    const allProjects = await getAllProjects(walletAddress);
     return NextResponse.json({ success: true, projects: allProjects });
 
   case 'createProject':
-    const createProjectResult = await createProject(userId, projectName, description);
+    const createProjectResult = await createProject(walletAddress, projectName, description);
     return NextResponse.json(createProjectResult);
 
   case 'deleteProject':
-    const deleteProjectResult = await deleteProject(userId, projectName);
+    const deleteProjectResult = await deleteProject(walletAddress, projectName);
     return NextResponse.json(deleteProjectResult);
 
   case 'getProject':
-    const getProjectResult = await getProject(userId, projectName);
+    const getProjectResult = await getProject(walletAddress, projectName);
     return NextResponse.json(getProjectResult);
 
   case 'renameProject':
-    const renameProjectResult = await renameProject(userId, oldName, newName);
+    const renameProjectResult = await renameProject(walletAddress, oldName, newName);
     return NextResponse.json(renameProjectResult);
+
+  case 'checkHealth':
+    const isHealthy = await checkContainerHealth(walletAddress);
+    return NextResponse.json({ isHealthy, walletAddress });
 
   default:
     return NextResponse.json(

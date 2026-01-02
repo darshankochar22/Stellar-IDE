@@ -13,7 +13,8 @@ import {
   Repeat2,
   AlertCircle,
 } from "lucide-react";
-import { isConnected, setAllowed, getAddress } from "@stellar/freighter-api";
+import { setAllowed, getAddress } from "@stellar/freighter-api";
+import { useWallet } from "@/context/WalletContext";
 
 interface Transaction {
   id: string;
@@ -45,10 +46,16 @@ export function WalletConnect({
   const [showFullKey, setShowFullKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Use external state if provided, otherwise use internal state
-  const isConnectedState = externalIsConnected ?? false;
-  const walletAddressState = externalWalletAddress;
-  const walletBalanceState = externalWalletBalance ?? "0.00";
+  // Get wallet context
+  const walletContext = useWallet();
+
+  // Use context if available, otherwise use external props, otherwise use internal state
+  const isConnectedState =
+    walletContext?.isConnected ?? externalIsConnected ?? false;
+  const walletAddressState =
+    walletContext?.walletAddress ?? externalWalletAddress;
+  const walletBalanceState =
+    walletContext?.walletBalance ?? externalWalletBalance ?? "0.00";
 
   // Mock transactions
   const [transactions] = useState<Transaction[]>([
@@ -102,23 +109,29 @@ export function WalletConnect({
     setIsConnecting(true);
     setError(null);
     try {
-      // Check if wallet is already connected
-      const connected = await isConnected();
+      console.log("[WalletConnect] Starting wallet connection...");
 
-      if (!connected.isConnected) {
-        // Request wallet access
-        const allowed = await setAllowed();
-        if (!allowed.isAllowed) {
-          setError("Wallet access denied. Please approve in Freighter.");
-          setIsConnecting(false);
-          return;
-        }
+      // Step 1: Request wallet access - this opens Freighter popup
+      console.log("[WalletConnect] Requesting wallet access...");
+      const allowed = await setAllowed();
+      console.log("[WalletConnect] Permission result:", allowed);
+
+      if (!allowed.isAllowed) {
+        setError("Please approve wallet access in the Freighter popup.");
+        setIsConnecting(false);
+        return;
       }
 
-      // Get the wallet address
+      // Step 2: Get wallet address - should work after setAllowed
+      console.log("[WalletConnect] Getting wallet address...");
       const addressData = await getAddress();
-      if (!addressData.address) {
-        throw new Error("Could not retrieve wallet address");
+      console.log("[WalletConnect] Address data:", addressData);
+
+      if (!addressData || !addressData.address) {
+        console.error("[WalletConnect] No address in response:", addressData);
+        throw new Error(
+          "Could not get wallet address. Make sure you have selected an account in Freighter and approved access."
+        );
       }
 
       const walletAddress = addressData.address;
@@ -127,13 +140,69 @@ export function WalletConnect({
       // Fetch real balance from Stellar network
       const balance = await fetchBalance(walletAddress);
 
-      // Call the onConnect callback if provided
+      // Create Docker container for this wallet
+      try {
+        console.log(`Creating container for wallet: ${walletAddress}`);
+        const containerResponse = await fetch("/api/docker", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "create",
+            walletAddress,
+          }),
+        });
+
+        if (!containerResponse.ok) {
+          throw new Error(
+            `Container API error: ${containerResponse.status} ${containerResponse.statusText}`
+          );
+        }
+
+        const containerData = await containerResponse.json();
+        if (containerData.success) {
+          console.log(`Container created: ${containerData.containerName}`);
+          walletContext.setContainerReady(true);
+        } else {
+          console.warn(`Container creation warning: ${containerData.error}`);
+          // Don't fail the wallet connection if container already exists
+          walletContext.setContainerReady(true);
+        }
+      } catch (containerError) {
+        console.warn("Container creation error:", containerError);
+        // Don't fail the wallet connection if there's a container error
+        walletContext.setContainerReady(true);
+      }
+
+      // Update global wallet context
+      walletContext.connect(walletAddress, balance);
+
+      // Call the onConnect callback if provided (for backward compatibility)
       if (onConnect) {
         onConnect(walletAddress, balance);
       }
-    } catch (error: any) {
-      console.error("Wallet connection error:", error);
-      setError(error.message || "Failed to connect wallet. Please try again.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("[WalletConnect] Connection error:", errorMessage, error);
+
+      // Show helpful error message
+      if (
+        errorMessage.includes("approved") ||
+        errorMessage.includes("denied")
+      ) {
+        setError("Please approve wallet access in the Freighter popup.");
+      } else if (
+        errorMessage.includes("account") ||
+        errorMessage.includes("address")
+      ) {
+        setError(
+          "Could not get wallet address. Make sure you have an account in Freighter and approved access."
+        );
+      } else if (errorMessage.includes("locked")) {
+        setError("Freighter is locked. Please unlock it with your password.");
+      } else {
+        setError(errorMessage || "Failed to connect wallet. Please try again.");
+      }
     } finally {
       setIsConnecting(false);
     }
@@ -142,7 +211,9 @@ export function WalletConnect({
   const handleDisconnect = () => {
     setShowFullKey(false);
     setError(null);
-    // Call the onDisconnect callback if provided
+    // Update global wallet context
+    walletContext.disconnect();
+    // Call the onDisconnect callback if provided (for backward compatibility)
     if (onDisconnect) {
       onDisconnect();
     }

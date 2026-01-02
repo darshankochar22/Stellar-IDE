@@ -14,13 +14,13 @@ import {
 
 /**
  * Get all files from container project directory
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param projectName Optional specific project to filter files from
  * @returns List of files
  */
-export async function getContainerFiles(userId: string, projectName?: string) {
+export async function getContainerFiles(walletAddress: string, projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     console.log(`Getting files from container: ${containerName}, project: ${projectName}`);
 
     // Verify container is running
@@ -90,14 +90,14 @@ export async function getContainerFiles(userId: string, projectName?: string) {
 
 /**
  * Get content of a specific file
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param filePath The relative file path
  * @param projectName Optional specific project
  * @returns File content
  */
-export async function getFileContent(userId: string, filePath: string, projectName?: string) {
+export async function getFileContent(walletAddress: string, filePath: string, projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const safePath = escapeFilePath(filePath);
     console.log(`Reading file: ${safePath} from container: ${containerName}`);
 
@@ -140,15 +140,15 @@ export async function getFileContent(userId: string, filePath: string, projectNa
 
 /**
  * Save content to a file
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param filePath The relative file path
  * @param content The file content to save
  * @param projectName Optional specific project
  * @returns Save result
  */
-export async function saveFileContent(userId: string, filePath: string, content: string, projectName?: string) {
+export async function saveFileContent(walletAddress: string, filePath: string, content: string, projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const safePath = escapeFilePath(filePath);
     console.log(`Saving file: ${safePath} to container: ${containerName}`);
 
@@ -204,14 +204,14 @@ export async function saveFileContent(userId: string, filePath: string, content:
 
 /**
  * Delete a file from the container
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param filePath The relative file path
  * @param projectName Optional specific project
  * @returns Deletion result
  */
-export async function deleteFile(userId: string, filePath: string, projectName?: string) {
+export async function deleteFile(walletAddress: string, filePath: string, projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const safePath = escapeFilePath(filePath);
     console.log(`Deleting file: ${safePath} from container: ${containerName}`);
 
@@ -252,14 +252,14 @@ export async function deleteFile(userId: string, filePath: string, projectName?:
 
 /**
  * Delete a folder from the container
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param folderPath The relative folder path
  * @param projectName Optional specific project
  * @returns Deletion result
  */
-export async function deleteFolder(userId: string, folderPath: string, projectName?: string) {
+export async function deleteFolder(walletAddress: string, folderPath: string, projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const safePath = escapeFilePath(folderPath);
     console.log(`Deleting folder: ${safePath} from container: ${containerName}`);
 
@@ -300,15 +300,15 @@ export async function deleteFolder(userId: string, folderPath: string, projectNa
 
 /**
  * Create a new file in the container
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param filePath The relative file path
  * @param content The initial file content
  * @param projectName Optional specific project
  * @returns Creation result
  */
-export async function createFile(userId: string, filePath: string, content: string = '', projectName?: string) {
+export async function createFile(walletAddress: string, filePath: string, content: string = '', projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const safePath = escapeFilePath(filePath);
     console.log(`Creating file: ${safePath} in container: ${containerName}`);
 
@@ -353,14 +353,14 @@ export async function createFile(userId: string, filePath: string, content: stri
 
 /**
  * Create a folder in the container
- * @param userId The user ID
+ * @param walletAddress The Stellar wallet public key
  * @param folderPath The path of the folder to create
  * @param projectName Optional specific project
  * @returns Success or error
  */
-export async function createFolder(userId: string, folderPath: string, projectName?: string) {
+export async function createFolder(walletAddress: string, folderPath: string, projectName?: string) {
   try {
-    const containerName = getContainerName(userId);
+    const containerName = getContainerName(walletAddress);
     const safePath = escapeFilePath(folderPath);
     console.log(`Creating folder: ${safePath} in container: ${containerName}`);
 

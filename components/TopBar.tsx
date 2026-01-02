@@ -66,7 +66,8 @@ export default function TopBar({
 
         <span className="text-xs text-gray-500">User: {userId}</span>
 
-        {connected ? (
+        {/* Wallet connection button - commented out, handle in home page only */}
+        {/* {connected ? (
           <div className="flex items-center gap-2">
             <span className="text-xs text-white">
               {publicKey?.slice(0, 4)}...{publicKey?.slice(-4)}
@@ -85,7 +86,7 @@ export default function TopBar({
           >
             Connect Wallet
           </button>
-        )}
+        )} */}
 
         {openFile && (
           <button
@@ -97,29 +98,25 @@ export default function TopBar({
           </button>
         )}
 
-        <button
+        {/* Create Container button - commented out, auto-created on wallet connect */}
+        {/* <button
           onClick={onCreateContainer}
           disabled={containerLoading}
           className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-600 text-white disabled:opacity-50 transition-colors"
         >
           {containerLoading ? "Loading..." : "Create Container"}
-        </button>
+        </button> */}
 
-        <button
+        {/* Delete Container button - commented out, manage from home page only */}
+        {/* <button
           onClick={onDeleteContainer}
           disabled={containerLoading}
           className="text-xs px-3 py-1 rounded dark:bg-black hover:bg-[#171717] disabled:bg-gray-600 text-white disabled:opacity-50 transition-colors"
         >
           {containerLoading ? "Loading..." : "Delete Container"}
-        </button>
+        </button> */}
 
-        <DeployButton
-          userId={userId}
-          onLog={onLog}
-          isConnected={connected}
-          onConnectWallet={onConnectWallet}
-          projectName={projectName}
-        />
+        <DeployButton onLog={onLog} projectName={projectName} />
       </div>
 
       {/* Spacer */}

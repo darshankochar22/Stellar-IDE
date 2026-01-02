@@ -77,7 +77,7 @@ export function useFileCreation(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: creatingItem.type === "file" ? "createFile" : "createFolder",
-          userId,
+          walletAddress: userId, // userId parameter contains wallet address
           filePath: fullPath,
           projectName,
         }),

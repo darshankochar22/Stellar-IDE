@@ -15,7 +15,7 @@ const SOROBAN_URL = "https://soroban-testnet.stellar.org";
 const server = new StellarRpc.Server(SOROBAN_URL);
 
 export async function deployWithWallet(
-  userId: string,
+  walletAddress: string,
   logToTerminal: (msg: string, type: string) => void,
   projectName?: string
 ) {
@@ -26,7 +26,7 @@ export async function deployWithWallet(
     const buildResponse = await fetch("/api/docker", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "buildContract", userId, projectName }),
+      body: JSON.stringify({ action: "buildContract", walletAddress, projectName }),
     });
 
     const buildData = await buildResponse.json();
@@ -46,10 +46,11 @@ export async function deployWithWallet(
       }
     }
 
-    const { address } = await getAddress();
-    if (!address) {
-      throw new Error("Could not get wallet address");
+    const addressData = await getAddress();
+    if (!addressData || !addressData.address) {
+      throw new Error("Could not get wallet address. Make sure you have approved wallet access in Freighter.");
     }
+    const { address } = addressData;
 
     logToTerminal(
       `Using wallet: ${address.slice(0, 6)}...${address.slice(-4)}`,

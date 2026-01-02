@@ -55,24 +55,24 @@ export function useTerminalLogging({ onLogsUpdate }: UseTerminalLoggingProps) {
       ]);
     };
 
-    console.log = (...args) => {
+    console.log = (...args: any[]) => {
       addLog(args.length === 1 ? args[0] : args.join(" "), "log");
-      originalLog.apply(console, args);
+      originalLog.apply(console, args as any);
     };
 
-    console.error = (...args) => {
+    console.error = (...args: any[]) => {
       addLog(args.length === 1 ? args[0] : args.join(" "), "error");
-      originalError.apply(console, args);
+      originalError.apply(console, args as any);
     };
 
-    console.warn = (...args) => {
+    console.warn = (...args: any[]) => {
       addLog(args.length === 1 ? args[0] : args.join(" "), "warn");
-      originalWarn.apply(console, args);
+      originalWarn.apply(console, args as any);
     };
 
-    console.info = (...args) => {
+    console.info = (...args: any[]) => {
       addLog(args.length === 1 ? args[0] : args.join(" "), "info");
-      originalInfo.apply(console, args);
+      originalInfo.apply(console, args as any);
     };
 
     return () => {

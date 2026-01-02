@@ -38,8 +38,8 @@ export function useWallet(onLog: LogFunction): UseWalletReturn {
           return;
         }
 
-        const alreadyConnected = await isConnected();
-        if (alreadyConnected) {
+        const connectionStatus = await isConnected();
+        if (connectionStatus.isConnected) {
           const result = await getAddress();
           setConnected(true);
           setPublicKey(result.address || null);
@@ -69,7 +69,8 @@ export function useWallet(onLog: LogFunction): UseWalletReturn {
       const access = await setAllowed();
 
       if (access.isAllowed) {
-        const { address, error } = await getAddress();
+        const addressData = await getAddress();
+        const address = addressData?.address;
 
         if (address) {
           setPublicKey(address);
@@ -79,7 +80,7 @@ export function useWallet(onLog: LogFunction): UseWalletReturn {
             "log"
           );
         } else {
-          throw new Error(error || "Failed to retrieve address");
+          throw new Error("Failed to retrieve wallet address");
         }
       } else {
         onLog("✗ User declined wallet access", "warn");
