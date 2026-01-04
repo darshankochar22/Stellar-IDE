@@ -278,6 +278,7 @@ export default function Right({
           onSave={handleSave}
           onTerminalClose={() => setTerminalOpen(false)}
           onTerminalHeightChange={setTerminalHeight}
+          projectName={projectName}
         />
       </div>
     </div>

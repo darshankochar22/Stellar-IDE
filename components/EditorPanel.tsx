@@ -35,11 +35,10 @@ interface EditorPanelProps {
   onSave: () => void;
   onTerminalClose: () => void;
   onTerminalHeightChange: (height: number) => void;
+  projectName?: string;
 }
 
-// LSP State
-let lspClient: any = null;
-let isLSPInitialized = false;
+
 
 export default function EditorPanel({
   openFile,
@@ -55,6 +54,7 @@ export default function EditorPanel({
   onEditorMount,
   onTerminalClose,
   onTerminalHeightChange,
+  projectName,
 }: EditorPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -64,6 +64,41 @@ export default function EditorPanel({
   
   // LSP Status
   const [lspStatus, setLspStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [dockerWorkspacePath, setDockerWorkspacePath] = useState<string>('');
+  const lspInitializedRef = useRef(false);
+  const lspClientRef = useRef<any>(null);
+
+  // Fetch Docker config
+  useEffect(() => {
+    fetch('/api/docker/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.workspacePath) {
+          console.log('[Editor] Loaded Docker config:', data.workspacePath);
+          setDockerWorkspacePath(data.workspacePath);
+        }
+      })
+      .catch(err => console.error('[Editor] Failed to load config:', err));
+  }, []);
+
+  // Trigger LSP initialization when config loads
+  useEffect(() => {
+    if (dockerWorkspacePath && editorRef.current && monacoRef.current && !lspInitializedRef.current) {
+        initializeLSP(monacoRef.current, editorRef.current);
+    }
+  }, [dockerWorkspacePath]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (lspClientRef.current) {
+        console.log('[LSP] Stopping client...');
+        lspClientRef.current.stop();
+        lspClientRef.current = null;
+        lspInitializedRef.current = false;
+      }
+    };
+  }, []);
 
   const handleMouseWheel = (event: WheelEvent) => {
     if (event.ctrlKey || event.metaKey) {
@@ -101,13 +136,20 @@ export default function EditorPanel({
   };
 
   // Initialize LSP
+  // Initialize LSP
   async function initializeLSP(monaco: MonacoType, editorInstance: editor.IStandaloneCodeEditor) {
-    if (isLSPInitialized) {
+    if (lspInitializedRef.current) {
       console.log('[LSP] Already initialized');
+      if (lspStatus !== 'connected') setLspStatus('connected');
       return;
     }
 
-    console.log('[LSP] Starting initialization...');
+    if (!dockerWorkspacePath) {
+        console.log('[LSP] Waiting for workspace config...');
+        return;
+    }
+
+    console.log('[LSP] Starting initialization with workspace:', dockerWorkspacePath);
     setLspStatus('connecting');
 
     try {
@@ -117,6 +159,13 @@ export default function EditorPanel({
 
       console.log('[LSP] Creating WebSocket connection to ws://localhost:3001...');
       const webSocket = new WebSocket('ws://localhost:3001');
+
+      // Pre-connect close handler
+      webSocket.onclose = () => {
+        console.log('[LSP] WebSocket closed before connection established');
+        setLspStatus('disconnected');
+        lspInitializedRef.current = false;
+      };
 
       // Wait for WebSocket to open
       await new Promise<void>((resolve, reject) => {
@@ -142,23 +191,29 @@ export default function EditorPanel({
 
       listen({
         webSocket,
-        onConnection: (connection) => {
+        onConnection: async (connection) => {
           console.log('[LSP] Connection established');
+          
+          // Remove pre-connection close handler
+          webSocket.onclose = null;
 
           const client = new MonacoLanguageClient({
             name: 'Rust Language Client',
             clientOptions: {
               documentSelector: [{ language: 'rust' }],
               workspaceFolder: {
-                uri: monaco.Uri.parse('file:///workspace'),
+                uri: monaco.Uri.parse(`file://${dockerWorkspacePath}`),
                 name: 'workspace',
                 index: 0
               },
               errorHandler: {
-                error: () => ({ action: ErrorAction.Continue }),
+                error: (error, message, count) => {
+                    console.error('[LSP] Error handler:', error, message);
+                    return { action: ErrorAction.Continue };
+                },
                 closed: () => {
-                  console.log('[LSP] Connection closed');
-                  isLSPInitialized = false;
+                  console.log('[LSP] Client Connection closed');
+                  lspInitializedRef.current = false;
                   setLspStatus('disconnected');
                   return { action: CloseAction.DoNotRestart };
                 }
@@ -196,26 +251,26 @@ export default function EditorPanel({
             }
           });
 
-          connection.onError((error) => {
-            console.error('[LSP] Connection error:', error);
-          });
-
           connection.onClose(() => {
-            console.log('[LSP] Connection closed');
-            isLSPInitialized = false;
-            setLspStatus('disconnected');
-            if (lspClient) {
-              lspClient.stop();
-              lspClient = null;
-            }
+             console.log('[LSP] Transport validation failed / connection closed');
+             setLspStatus('disconnected');
+             lspInitializedRef.current = false;
           });
 
           console.log('[LSP] Starting language client...');
-          client.start();
-          lspClient = client;
-          isLSPInitialized = true;
-          setLspStatus('connected');
-          console.log('[LSP] ✅ Language client started successfully');
+          try {
+              await client.start();
+              lspClientRef.current = client;
+              lspInitializedRef.current = true;
+              setLspStatus('connected');
+              console.log('[LSP] Language client started successfully');
+          } catch (e) {
+              console.error('[LSP] Start failed:', e);
+              setLspStatus('disconnected');
+              lspInitializedRef.current = false;
+          }
+
+
 
           // Setup keyboard shortcuts
           editorInstance.addCommand(
@@ -233,7 +288,7 @@ export default function EditorPanel({
     } catch (error) {
       console.error('[LSP] Failed to initialize:', error);
       setLspStatus('disconnected');
-      isLSPInitialized = false;
+      lspInitializedRef.current = false;
     }
   }
 
@@ -267,17 +322,7 @@ export default function EditorPanel({
     };
   }
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (lspClient) {
-        console.log('[LSP] Stopping client...');
-        lspClient.stop();
-        lspClient = null;
-        isLSPInitialized = false;
-      }
-    };
-  }, []);
+
 
   function getFileContent(file: FileNode | null): string {
     if (!file) return "";
@@ -325,7 +370,7 @@ export default function EditorPanel({
           {lspStatus === 'connected' && (
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-              Connected ✓
+              Connected
             </span>
           )}
           {lspStatus === 'connecting' && (
@@ -350,6 +395,7 @@ export default function EditorPanel({
           {openFile ? (
             <Editor
               height="100%"
+              path={dockerWorkspacePath && projectName ? `${dockerWorkspacePath}/${projectName}/${openFile.path}` : undefined}
               language={getLanguage(openFile.name)}
               theme="vs-dark"
               value={getFileContent(openFile)}
@@ -395,7 +441,6 @@ export default function EditorPanel({
                 renderLineHighlight: "all",
                 overviewRulerBorder: false,
                 hideCursorInOverviewRuler: false,
-                // Enhanced LSP features
                 hover: {
                   enabled: true,
                   delay: 300
