@@ -9,7 +9,7 @@ import BottomBar from "./BottomBar";
 import { useLSPClient } from "../lib/useLSPClient";
 
 type MonacoType = unknown;
-
+//nn
 type FileNode = {
   name: string;
   type: "file" | "folder";
