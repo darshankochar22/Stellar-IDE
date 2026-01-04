@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef,useState,useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import Terminal, { type LogMessage } from "./Terminal";
 import TabBar, { type OpenFile } from "./TabBar";
 import BottomBar from "./BottomBar";
+import { useLSPClient } from "../lib/useLSPClient";
 
 type MonacoType = unknown;
 
@@ -19,6 +20,7 @@ type FileNode = {
 
 interface EditorPanelProps {
   openFile: FileNode | null;
+  containerId?: string;
   openFiles: OpenFile[];
   fileContents: Map<string, string>;
   fontSize: number;
@@ -41,6 +43,7 @@ export default function EditorPanel({
   openFile,
   openFiles,
   fileContents,
+  containerId,
   fontSize,
   terminalOpen,
   terminalHeight,
@@ -56,6 +59,24 @@ export default function EditorPanel({
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const accumulatedDeltaRef = useRef(0);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const [isLSPEnabled, setIsLSPEnabled] = useState(false);
+
+  const fileUri = openFile 
+  ? `file:///home/developer/workspace/${openFile.path}`
+  : '';
+
+  const { isConnected, openTextDocument, changeTextDocument } = useLSPClient(
+    containerId,
+    fileUri
+  );
+
+  useEffect(() => {
+    if (isConnected && openFile && fileContents.has(openFile.path)) {
+      const content = fileContents.get(openFile.path) || '';
+      openTextDocument(content);
+      console.log('📄 Opened file in LSP:', openFile.path);
+    }
+  }, [isConnected, openFile, fileContents, openTextDocument]);
 
   const handleMouseWheel = (event: WheelEvent) => {
     if (event.ctrlKey || event.metaKey) {

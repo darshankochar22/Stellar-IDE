@@ -210,7 +210,7 @@ export async function deployWithWallet(
             }
           }
           
-          logToTerminal("✅ Deployed!", "log");
+          logToTerminal(" Deployed!", "log");
           logToTerminal(`📝 Contract ID: ${contractIdStr}`, "log");
           logToTerminal(
             `🔗 https://stellar.expert/explorer/testnet/contract/${contractIdStr}`,
