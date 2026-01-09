@@ -55,6 +55,11 @@ export interface LSPFunctionsRef {
     uri: string,
     position: { line: number; character: number }
   ) => Promise<unknown[]>;
+  requestReferences?: (
+    uri: string,
+    position: { line: number; character: number },
+    context?: { includeDeclaration?: boolean }
+  ) => Promise<unknown[]>;
   requestFormatting?: (uri: string) => Promise<unknown[]>;
   requestCodeAction?: (
     uri: string,

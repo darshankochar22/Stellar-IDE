@@ -268,6 +268,57 @@ export function requestDefinition(
 }
 
 /**
+ * Request find all references
+ */
+export function requestReferences(
+  ws: WebSocket,
+  uri: string,
+  position: { line: number; character: number },
+  context?: { includeDeclaration?: boolean },
+  timeout = 5000
+): Promise<unknown[]> {
+  return new Promise((resolve) => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      resolve([]);
+      return;
+    }
+
+    const requestId = createRequestId();
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.id === requestId) {
+          ws.removeEventListener('message', handleMessage);
+          const result = message.result;
+          resolve(Array.isArray(result) ? result : []);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.addEventListener('message', handleMessage);
+
+    setTimeout(() => {
+      ws.removeEventListener('message', handleMessage);
+      resolve([]);
+    }, timeout);
+
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'textDocument/references',
+      params: {
+        textDocument: { uri },
+        position,
+        context: context || { includeDeclaration: true },
+      },
+      id: requestId,
+    }));
+  });
+}
+
+/**
  * Request signature help
  */
 export function requestSignatureHelp(

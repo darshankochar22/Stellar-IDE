@@ -17,6 +17,7 @@ import { registerInlayHintsProvider } from "./inlayHints";
 import { registerCompletionProvider } from "./completionProvider";
 import { registerHoverProvider } from "./hoverProvider";
 import { registerDefinitionProvider } from "./definitionProvider";
+import { registerReferenceProvider } from "./referenceProvider";
 import { registerFormatProvider } from "./formatProvider";
 import { registerCodeActionProvider } from "./codeActionProvider";
 import { useEditorZoom } from "./useEditorZoom";
@@ -30,6 +31,7 @@ interface MonacoEditorProps {
   requestCompletion?: LSPFunctionsRef["requestCompletion"];
   requestHover?: LSPFunctionsRef["requestHover"];
   requestDefinition?: LSPFunctionsRef["requestDefinition"];
+  requestReferences?: LSPFunctionsRef["requestReferences"];
   requestFormatting?: LSPFunctionsRef["requestFormatting"];
   requestCodeAction?: LSPFunctionsRef["requestCodeAction"];
   onChange: (value: string | undefined) => void;
@@ -46,6 +48,7 @@ export default function MonacoEditorWrapper({
   requestCompletion,
   requestHover,
   requestDefinition,
+  requestReferences,
   requestFormatting,
   requestCodeAction,
   onChange,
@@ -70,6 +73,7 @@ export default function MonacoEditorWrapper({
         requestCompletion,
         requestHover,
         requestDefinition,
+        requestReferences,
         requestFormatting,
         requestCodeAction,
       };
@@ -79,6 +83,7 @@ export default function MonacoEditorWrapper({
       registerCompletionProvider(monaco);
       registerHoverProvider(monaco);
       registerDefinitionProvider(monaco);
+      registerReferenceProvider(monaco);
       registerFormatProvider(monaco);
       registerCodeActionProvider(monaco);
 
@@ -105,6 +110,7 @@ export default function MonacoEditorWrapper({
       requestCompletion,
       requestHover,
       requestDefinition,
+      requestReferences,
       requestFormatting,
       requestCodeAction,
       onMount,

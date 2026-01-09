@@ -15,6 +15,7 @@ import {
   requestHover as sendHoverRequest,
   requestCompletion as sendCompletionRequest,
   requestDefinition as sendDefinitionRequest,
+  requestReferences as sendReferencesRequest,
   requestSignatureHelp as sendSignatureHelpRequest,
   requestFormatting as sendFormattingRequest,
   requestCodeAction as sendCodeActionRequest,
@@ -31,6 +32,7 @@ interface UseLSPClientReturn {
   requestHover: (uri: string, position: { line: number; character: number }) => Promise<{ contents: string } | null>;
   requestCompletion: (uri: string, position: { line: number; character: number }) => Promise<unknown[]>;
   requestDefinition: (uri: string, position: { line: number; character: number }) => Promise<unknown[]>;
+  requestReferences: (uri: string, position: { line: number; character: number }, context?: { includeDeclaration?: boolean }) => Promise<unknown[]>;
   requestSignatureHelp: (uri: string, position: { line: number; character: number }) => Promise<unknown | null>;
   requestFormatting: (uri: string) => Promise<unknown[]>;
   requestCodeAction: (uri: string, range: { start: { line: number; character: number }; end: { line: number; character: number } }, context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }) => Promise<CodeAction[]>;
@@ -241,6 +243,18 @@ export function useLSPClient(
     []
   );
 
+  // Request references
+  const requestReferences = useCallback(
+    (uri: string, position: { line: number; character: number }, context?: { includeDeclaration?: boolean }): Promise<unknown[]> => {
+      const ws = wsRef.current;
+      if (!ws || !isInitializedRef.current) {
+        return Promise.resolve([]);
+      }
+      return sendReferencesRequest(ws, uri, position, context);
+    },
+    []
+  );
+
   // Request signature help
   const requestSignatureHelp = useCallback(
     (uri: string, position: { line: number; character: number }): Promise<unknown | null> => {
@@ -291,6 +305,7 @@ export function useLSPClient(
     requestHover,
     requestCompletion,
     requestDefinition,
+    requestReferences,
     requestSignatureHelp,
     requestFormatting,
     requestCodeAction,

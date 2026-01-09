@@ -19,6 +19,7 @@ export { registerInlayHintsProvider, invalidateHintsCache } from "./inlayHints";
 export { registerCompletionProvider } from "./completionProvider";
 export { registerHoverProvider } from "./hoverProvider";
 export { registerDefinitionProvider } from "./definitionProvider";
+export { registerReferenceProvider } from "./referenceProvider";
 export { registerFormatProvider } from "./formatProvider";
 export { registerCodeActionProvider } from "./codeActionProvider";
 export { getLanguageFromFilename, getEditorOptions, LANGUAGE_MAP } from "./constants";

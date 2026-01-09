@@ -40,6 +40,7 @@ export {
   requestHover,
   requestCompletion,
   requestDefinition,
+  requestReferences,
   requestSignatureHelp,
   requestFormatting,
   requestCodeAction,
