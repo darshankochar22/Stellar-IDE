@@ -15,25 +15,38 @@ export function DeployButton({ onLog, projectName }: DeployButtonProps) {
 
   const handleDeploy = async () => {
     if (!wallet.walletAddress) {
-      onLog("✗ Wallet address not found", "error");
+      onLog(" Wallet address not found", "error");
       return;
     }
 
     // Check wallet connection
     if (!wallet.isConnected) {
-      onLog("Wallet not connected. Connecting...", "warn");
+      onLog("  Wallet not connected. Connecting...", "warn");
       await wallet.connect(wallet.walletAddress, wallet.walletBalance);
 
       // Give it a moment
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (!wallet.isConnected) {
-        onLog("✗ Wallet connection required", "error");
+        onLog(" Wallet connection required", "error");
         return;
       }
     }
 
     setIsDeploying(true);
+    onLog("", "log");
+    onLog("", "info");
+    onLog("DEPLOYING CONTRACT", "info");
+    onLog("", "info");
+    onLog(` Project: ${projectName || "default"}`, "info");
+    onLog(
+      ` Wallet: ${wallet.walletAddress.slice(
+        0,
+        8
+      )}...${wallet.walletAddress.slice(-6)}`,
+      "info"
+    );
+    onLog("", "log");
 
     try {
       const result = await deployWithWallet(
@@ -45,15 +58,31 @@ export function DeployButton({ onLog, projectName }: DeployButtonProps) {
       );
 
       if (result.success) {
+        onLog("", "log");
+        onLog("", "log");
+        onLog(" DEPLOYMENT SUCCESSFUL", "log");
+        onLog("", "log");
+        onLog(` Contract ID: ${result.contractId}`, "log");
+        onLog("", "log");
         // Show success message
-        alert(`🎉 Contract deployed!\nContract ID: ${result.contractId}`);
+        alert(` Contract deployed!\nContract ID: ${result.contractId}`);
       } else {
-        onLog(`✗ Deployment failed: ${result.error}`, "error");
+        onLog("", "log");
+        onLog("", "error");
+        onLog(" DEPLOYMENT FAILED", "error");
+        onLog("", "error");
+        onLog(`${result.error}`, "error");
+        onLog("", "log");
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      onLog(`✗ Unexpected error: ${errorMessage}`, "error");
+      onLog("", "log");
+      onLog("", "error");
+      onLog(" DEPLOYMENT ERROR", "error");
+      onLog("", "error");
+      onLog(`${errorMessage}`, "error");
+      onLog("", "log");
     } finally {
       setIsDeploying(false);
     }

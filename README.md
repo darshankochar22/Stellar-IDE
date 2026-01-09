@@ -770,6 +770,6 @@ npm run lint
 
 ---
 
-**Happy Coding! 🎉**
+**Happy Coding! **
 
 Start building your Soroban smart contracts today with a modern, intuitive development environment.

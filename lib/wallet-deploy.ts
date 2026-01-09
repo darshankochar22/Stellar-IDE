@@ -20,7 +20,7 @@ export async function deployWithWallet(
   projectName?: string
 ) {
   try {
-    logToTerminal("Starting wallet-based deployment...", "info");
+    logToTerminal(" Building contract...", "info");
 
     // 1. Build contract
     const buildResponse = await fetch("/api/docker", {
@@ -34,10 +34,10 @@ export async function deployWithWallet(
       throw new Error(`Build failed: ${buildData.error}`);
     }
 
-    logToTerminal(`✓ Contract built (${buildData.wasmSize} bytes)`, "log");
+    logToTerminal(` Contract built (${(buildData.wasmSize / 1024).toFixed(2)} KB)`, "log");
 
     // 2. Connect wallet
-    logToTerminal("Checking Freighter connection...", "info");
+    logToTerminal(" Checking Freighter connection...", "info");
     
     let connectionStatus;
     try {
@@ -48,7 +48,7 @@ export async function deployWithWallet(
     }
     
     if (!connectionStatus.isConnected) {
-      logToTerminal("Requesting wallet access...", "warn");
+      logToTerminal("  Requesting wallet access...", "warn");
       try {
         const access = await setAllowed();
         console.log("[Deploy] setAllowed result:", access);
@@ -60,7 +60,7 @@ export async function deployWithWallet(
       }
     }
 
-    logToTerminal("Getting wallet address...", "info");
+    logToTerminal(" Getting wallet address...", "info");
     let addressData;
     try {
       addressData = await getAddress();
@@ -75,9 +75,10 @@ export async function deployWithWallet(
     const { address } = addressData;
 
     logToTerminal(
-      `Using wallet: ${address.slice(0, 6)}...${address.slice(-4)}`,
+      ` Using wallet: ${address.slice(0, 6)}...${address.slice(-4)}`,
       "log"
     );
+    logToTerminal("", "log");
 
     // 3. Upload WASM
     const wasmBuffer = Buffer.from(buildData.wasmBase64, "base64");
@@ -94,7 +95,7 @@ export async function deployWithWallet(
       .build();
 
     const preparedUploadTx = await server.prepareTransaction(uploadTx);
-    logToTerminal("⚠️ Sign WASM upload in wallet popup...", "warn");
+    logToTerminal(" Sign WASM upload in wallet popup...", "warn");
 
     const signedUploadTx = await signTransaction(
       preparedUploadTx.toXDR(),
@@ -110,16 +111,16 @@ export async function deployWithWallet(
       )
     );
 
-    logToTerminal(`ℹ️ Upload transaction hash: ${uploadResult.hash}`, "info");
+    logToTerminal(` Upload TX: ${uploadResult.hash.slice(0, 16)}...`, "info");
     logToTerminal(
-      `🔗 https://stellar.expert/explorer/testnet/tx/${uploadResult.hash}`,
+      `   → https://stellar.expert/explorer/testnet/tx/${uploadResult.hash}`,
       "info"
     );
 
     // 4. Wait for upload confirmation
     let uploadTxInfo;
     let attempts = 0;
-    logToTerminal("🌎 Submitting upload transaction...", "info");
+    logToTerminal(" Waiting for upload confirmation...", "info");
     
     while (attempts < 60) {
       try {
@@ -135,7 +136,7 @@ export async function deployWithWallet(
       await new Promise((resolve) => setTimeout(resolve, 1000));
       attempts++;
       if (attempts % 10 === 0)
-        logToTerminal(`Waiting... (${attempts}s)`, "info");
+        logToTerminal(`   Waiting... (${attempts}s)`, "log");
     }
 
     if (!uploadTxInfo || uploadTxInfo.status !== "SUCCESS") {
@@ -152,9 +153,10 @@ export async function deployWithWallet(
     const wasmHashBytes = wasmHash.bytes ? wasmHash.bytes() : (wasmHash as any);
 
     logToTerminal(
-      `✓ WASM uploaded (hash: ${Buffer.from(wasmHashBytes as any).toString('hex').slice(0, 16)}...)`,
+      ` WASM uploaded (hash: ${Buffer.from(wasmHashBytes as any).toString('hex').slice(0, 16)}...)`,
       "log"
     );
+    logToTerminal("", "log");
 
     // 5. Create contract instance
     const freshAccount = await server.getAccount(address);
@@ -183,7 +185,7 @@ export async function deployWithWallet(
       .build();
 
     const preparedCreateTx = await server.prepareTransaction(createTx);
-    logToTerminal("⚠️ Sign contract creation in wallet popup...", "warn");
+    logToTerminal(" Sign contract creation in wallet popup...", "warn");
 
     const signedCreateTx = await signTransaction(
       preparedCreateTx.toXDR(),
@@ -199,16 +201,16 @@ export async function deployWithWallet(
       )
     );
 
-    logToTerminal(`ℹ️ Deploy transaction hash: ${createResult.hash}`, "info");
+    logToTerminal(` Deploy TX: ${createResult.hash.slice(0, 16)}...`, "info");
     logToTerminal(
-      `🔗 https://stellar.expert/explorer/testnet/tx/${createResult.hash}`,
+      `   → https://stellar.expert/explorer/testnet/tx/${createResult.hash}`,
       "info"
     );
 
     // 6. Wait for final confirmation
     attempts = 0;
     let finalTxInfo;
-    logToTerminal("🌎 Submitting deploy transaction...", "info");
+    logToTerminal(" Waiting for deploy confirmation...", "info");
     
     while (attempts < 60) {
       try {
@@ -232,14 +234,19 @@ export async function deployWithWallet(
             }
           }
           
-          logToTerminal(" Deployed!", "log");
-          logToTerminal(`📝 Contract ID: ${contractIdStr}`, "log");
+          logToTerminal("", "log");
+          logToTerminal(" Contract Deployed Successfully!", "log");
+          logToTerminal("", "log");
+          logToTerminal(` Contract ID:`, "info");
+          logToTerminal(`   ${contractIdStr}`, "log");
+          logToTerminal("", "log");
+          logToTerminal(` Explorer Links:`, "info");
           logToTerminal(
-            `🔗 https://stellar.expert/explorer/testnet/contract/${contractIdStr}`,
+            `   → https://stellar.expert/explorer/testnet/contract/${contractIdStr}`,
             "info"
           );
           logToTerminal(
-            `🔗 https://lab.stellar.org/r/testnet/contract/${contractIdStr}`,
+            `   → https://lab.stellar.org/r/testnet/contract/${contractIdStr}`,
             "info"
           );
           
@@ -261,12 +268,13 @@ export async function deployWithWallet(
       await new Promise((resolve) => setTimeout(resolve, 1000));
       attempts++;
       if (attempts % 10 === 0)
-        logToTerminal(`Waiting for confirmation... (${attempts}s)`, "info");
+        logToTerminal(`   Waiting for confirmation... (${attempts}s)`, "log");
     }
 
     throw new Error("Contract creation timeout");
   } catch (err: any) {
-    logToTerminal(`✗ Deployment failed: ${err.message}`, "error");
+    logToTerminal("", "log");
+    logToTerminal(` ${err.message}`, "error");
     return { success: false, error: err.message };
   }
 }

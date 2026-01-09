@@ -136,7 +136,7 @@ function SidebarContent({
                   style={{ paddingLeft: `${(depth + 1) * 16 + 8}px` }}
                 >
                   <span className="text-gray-400 text-xs">
-                    {creatingItem.type === "file" ? "📄" : "📁"}
+                    {creatingItem.type === "file" ? "📄" : ""}
                   </span>
                   <input
                     type="text"
@@ -183,7 +183,7 @@ function SidebarContent({
               style={{ paddingLeft: "8px" }}
             >
               <span className="text-gray-400 text-xs">
-                {creatingItem.type === "file" ? "📄" : "📁"}
+                {creatingItem.type === "file" ? "📄" : ""}
               </span>
               <input
                 type="text"
@@ -264,7 +264,7 @@ function SidebarContent({
       {/* Resize Handle - Full height, easy to grab */}
       <div
         onMouseDown={onMouseDown}
-        className="w-1 h-full bg-[#252525] hover:bg-blue-500 cursor-col-resize transition-colors shrink-0 active:bg-blue-600"
+        className="w-1 h-full bg-[#252525] cursor-col-resize transition-colors shrink-0"
         title="Drag to resize sidebar"
         style={{ userSelect: "none" }}
       />

@@ -87,13 +87,15 @@ export default function Terminal({
   const getLogColor = (type: string) => {
     switch (type) {
       case "error":
-        return "text-red-400";
+        return "text-red-300";
       case "warn":
-        return "text-yellow-400";
+        return "text-gray-100";
       case "info":
-        return "text-blue-400";
+        // Terminal-style green for normal info
+        return "text-gray-100";
       default:
-        return "text-gray-300";
+        // Default console text
+        return "text-gray-100";
     }
   };
 
@@ -137,7 +139,7 @@ export default function Terminal({
       />
 
       {/* Terminal Header */}
-      <div className="h-10 bg-[#171717] flex items-center justify-between px-4 flex-shrink-0">
+      <div className="h-10 bg-[#171717] flex items-center justify-between px-4 shrink-0 text-sm">
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400 font-semibold uppercase">
             Console
@@ -158,27 +160,30 @@ export default function Terminal({
       {/* Terminal Content */}
       <div
         ref={terminalRef}
-        className="flex-1 overflow-y-auto bg-[#171717] font-mono text-xs p-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-[#171717]"
+        className="flex-1 overflow-y-auto bg-[#171717] font-mono text-sm p-4 space-y-1 scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-[#171717]"
         style={{
           scrollbarWidth: "thin",
           scrollbarColor: "#4b5563 #171717",
         }}
       >
         {logs.length === 0 ? (
-          <div className="text-gray-500 text-xs">
+          <div className="text-gray-500 text-sm">
             Waiting for console output...
           </div>
         ) : (
           logs.map((log) => (
-            <div key={log.id} className="flex gap-3">
-              <span className="text-gray-600 text-xs whitespace-nowrap">
+            <div key={log.id} className="flex gap-3 leading-5">
+              <span className="text-gray-600 text-xs whitespace-nowrap select-none w-20 shrink-0">
                 {log.timestamp}
               </span>
-              <span
-                className={`${getLogColor(log.type)} text-xs flex-1 break-all`}
+              <pre
+                className={`${getLogColor(
+                  log.type
+                )} text-sm flex-1 whitespace-pre-wrap font-mono m-0`}
+                style={{ overflowWrap: "break-word" }}
               >
                 {renderMessageWithLinks(log.message)}
-              </span>
+              </pre>
             </div>
           ))
         )}

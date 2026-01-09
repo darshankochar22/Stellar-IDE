@@ -37,7 +37,7 @@ export default function BottomBar({
       <div className="text-xs text-gray-500 flex items-center gap-3">
         {/* LSP Status */}
         {openFile?.name.endsWith(".rs") && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" suppressHydrationWarning>
             <span
               className={`w-2 h-2 rounded-full ${
                 lspConnected
@@ -51,6 +51,7 @@ export default function BottomBar({
                   ? "rust-analyzer connected"
                   : lspError || "Connecting..."
               }
+              suppressHydrationWarning
             />
             <span
               className={
@@ -60,6 +61,7 @@ export default function BottomBar({
                   ? "text-red-400"
                   : "text-yellow-400"
               }
+              suppressHydrationWarning
             >
               {lspConnected
                 ? "rust-analyzer"
@@ -68,7 +70,7 @@ export default function BottomBar({
                 : "Connecting..."}
             </span>
             {diagnosticsCount > 0 && (
-              <span className="text-orange-400">
+              <span className="text-orange-400" suppressHydrationWarning>
                 ({diagnosticsCount} issues)
               </span>
             )}

@@ -18,11 +18,11 @@ import { parseConnectionParams } from './url-parser';
 const PORT = 3001;
 const wss = new WebSocketServer({ port: PORT });
 
-console.log(`🚀 LSP Server listening on port ${PORT}`);
+console.log(`LSP Server listening on port ${PORT}`);
 
 // Server error handling
 wss.on('error', (error: Error) => {
-  console.error('[LSP] WebSocket server error:', error);
+    console.error('[LSP] WebSocket server error:', error);
 });
 
 wss.on('listening', () => {
@@ -30,14 +30,14 @@ wss.on('listening', () => {
 });
 
 wss.on('connection', (ws: WebSocket, request) => {
-  // Parse connection parameters
+    // Parse connection parameters
   const params = parseConnectionParams(request);
   
   if (!params) {
     console.error('[ERROR] Missing containerId parameter');
-    ws.close(1008, 'Missing containerId parameter');
-    return;
-  }
+            ws.close(1008, 'Missing containerId parameter');
+            return;
+        }
 
   const { containerId, workspacePath } = params;
 
@@ -67,7 +67,7 @@ wss.on('connection', (ws: WebSocket, request) => {
     cleanup();
   });
 
-  console.log(`🔗 New connection for container: ${containerId}`);
+  console.log(` New connection for container: ${containerId}`);
 
   // Start LSP connection process
   initializeLSPConnection(ws, state, containerId, workspacePath, cleanup);
@@ -91,9 +91,9 @@ async function initializeLSPConnection(
 
     if (!inspectData.State.Running) {
       console.error(`[ERROR] Container ${containerId} not running`);
-      ws.close(1008, 'Container not running');
-      return;
-    }
+                ws.close(1008, 'Container not running');
+                return;
+            }
 
     console.log(`Container ${containerId} is running`);
 
@@ -108,8 +108,8 @@ async function initializeLSPConnection(
 
     if (!state.connectionActive) {
       destroyStream(execStream);
-      return;
-    }
+                                return;
+                            }
 
     state.execStream = execStream;
     console.log(`Started rust-analyzer process`);
@@ -125,13 +125,13 @@ async function initializeLSPConnection(
     setupStreamHandlers(execStream, stderr, ws, state, containerId);
 
     // START LISTENING FIRST before processing messages
-    connection.listen();
+                connection.listen();
     console.log(`LSP connection established for container ${containerId}`);
 
     // NOW mark LSP as ready and process buffered messages
     state.isLspReady = true;
     processBufferedMessages(ws, state);
-  } catch (error) {
+                    } catch (error) {
     console.error(`[ERROR] Failed to set up LSP:`, error);
     if (state.connectionActive && ws.readyState === WebSocket.OPEN) {
       ws.close(
@@ -140,22 +140,22 @@ async function initializeLSPConnection(
       );
     }
     cleanup();
-  }
+    }
 }
 
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\n[LSP] Shutting down...');
-  wss.close(() => {
+    wss.close(() => {
     console.log('[LSP] Server closed');
-    process.exit(0);
-  });
+        process.exit(0);
+    });
 });
 
 process.on('SIGTERM', () => {
   console.log('\n[LSP] Shutting down...');
-  wss.close(() => {
+    wss.close(() => {
     console.log('[LSP] Server closed');
-    process.exit(0);
-  });
+        process.exit(0);
+    });
 });

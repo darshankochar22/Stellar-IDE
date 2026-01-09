@@ -96,10 +96,10 @@ export function applyMarkersToEditor(
 
     // Fallback: use first .rs model if no match found
     if (!model) {
-      console.warn('[LSP Diagnostics] ❌ Model not found for URI:', uri);
+      console.warn('[LSP Diagnostics] Model not found for URI:', uri);
       model = models.find(m => m.uri?.toString().endsWith('.rs')) || null;
       if (model) {
-        console.log('[LSP Diagnostics] ⚠️ Using fallback .rs model');
+        console.log('[LSP Diagnostics]Using fallback .rs model');
       }
     }
 
@@ -109,7 +109,7 @@ export function applyMarkersToEditor(
       editor.setModelMarkers(model, 'rust-analyzer', markers);
       console.log(`[LSP Diagnostics] ✓ Set ${markers.length} markers on model`);
     } else {
-      console.error('[LSP Diagnostics] ❌ No suitable model found');
+      console.error('[LSP Diagnostics] No suitable model found');
     }
   };
 
@@ -124,7 +124,7 @@ export function handleDiagnostics(
   diagnostics: Diagnostic[],
   onDiagnosticsCount: (count: number) => void
 ): void {
-  console.log(`[LSP Diagnostics] 📋 Received ${diagnostics.length} diagnostics for ${uri}`);
+  console.log(`[LSP Diagnostics]  Received ${diagnostics.length} diagnostics for ${uri}`);
   onDiagnosticsCount(diagnostics.length);
 
   if (diagnostics.length === 0) {

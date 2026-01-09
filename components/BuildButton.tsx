@@ -9,21 +9,91 @@ interface BuildButtonProps {
   userId?: string;
 }
 
+// Strip ANSI color codes from text
+function stripAnsi(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+// Format Rust compiler output for terminal display
+function formatRustOutput(
+  output: string,
+  onLog: (message: string, type: "log" | "error" | "warn" | "info") => void
+) {
+  const lines = stripAnsi(output).split("\n");
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Detect error lines
+    if (trimmed.startsWith("error[") || trimmed.startsWith("error:")) {
+      onLog(` ${trimmed}`, "error");
+    }
+    // Detect warning lines
+    else if (trimmed.startsWith("warning[") || trimmed.startsWith("warning:")) {
+      onLog(`  ${trimmed}`, "warn");
+    }
+    // Detect note/help lines
+    else if (trimmed.startsWith("note:") || trimmed.startsWith("help:")) {
+      onLog(`   ${trimmed}`, "info");
+    }
+    // Detect file location lines (e.g., --> src/lib.rs:10:5)
+    else if (trimmed.startsWith("-->")) {
+      onLog(`   ${trimmed}`, "info");
+    }
+    // Detect code snippet lines with line numbers (e.g., 10 |     let x = ...)
+    else if (/^\d+\s*\|/.test(trimmed)) {
+      onLog(`   ${trimmed}`, "log");
+    }
+    // Detect pointer lines (e.g., |     ^^^^ expected...)
+    else if (trimmed.startsWith("|")) {
+      onLog(`   ${trimmed}`, "error");
+    }
+    // Detect summary lines
+    else if (trimmed.startsWith("For more information")) {
+      onLog(`\n📚 ${trimmed}`, "info");
+    } else if (
+      trimmed.includes("could not compile") ||
+      trimmed.includes("aborting due to")
+    ) {
+      onLog(`\n ${trimmed}`, "error");
+    }
+    // Compiling/Finished messages
+    else if (
+      trimmed.startsWith("Compiling") ||
+      trimmed.startsWith("Finished")
+    ) {
+      onLog(` ${trimmed}`, "info");
+    } else if (trimmed.startsWith("Building")) {
+      onLog(` ${trimmed}`, "info");
+    }
+    // Default: just log the line
+    else {
+      onLog(`   ${trimmed}`, "log");
+    }
+  }
+}
+
 export function BuildButton({ onLog, projectName, userId }: BuildButtonProps) {
   const [isBuilding, setIsBuilding] = useState(false);
 
   const handleBuild = async () => {
     if (!projectName) {
-      onLog("Project name is required to build", "error");
+      onLog(" Project name is required to build", "error");
       return;
     }
     if (!userId) {
-      onLog("Wallet connection required to build", "error");
+      onLog(" Wallet connection required to build", "error");
       return;
     }
 
     setIsBuilding(true);
-    onLog("🔨 Starting contract build...", "info");
+    onLog("", "log"); // Empty line for spacing
+    onLog("", "info");
+    onLog(" BUILDING CONTRACT", "info");
+    onLog("", "info");
+    onLog(` Project: ${projectName}`, "info");
+    onLog("", "log");
 
     try {
       const response = await fetch("/api/docker", {
@@ -39,14 +109,45 @@ export function BuildButton({ onLog, projectName, userId }: BuildButtonProps) {
       const data = await response.json();
 
       if (data.success) {
-        onLog(`Build successful! (${data.wasmSize} bytes)`, "log");
+        onLog("", "log");
+        onLog("", "log");
+        onLog(" BUILD SUCCESSFUL", "log");
+        onLog("", "log");
+        onLog(` WASM Size: ${(data.wasmSize / 1024).toFixed(2)} KB`, "log");
+        onLog("", "log");
       } else {
-        onLog(` Build failed: ${data.error}`, "error");
+        onLog("", "log");
+        onLog("", "error");
+        onLog(" BUILD FAILED", "error");
+        onLog("", "error");
+        onLog("", "log");
+
+        // Format and display stderr (compiler errors)
+        if (data.stderr) {
+          formatRustOutput(data.stderr, onLog);
+        }
+
+        // Format and display stdout if present
+        if (data.stdout) {
+          formatRustOutput(data.stdout, onLog);
+        }
+
+        // Show the main error message if no detailed output
+        if (!data.stderr && !data.stdout && data.error) {
+          onLog(` ${data.error}`, "error");
+        }
+
+        onLog("", "log");
       }
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      onLog(` Build error: ${errorMessage}`, "error");
+      onLog("", "log");
+      onLog("", "error");
+      onLog(" BUILD ERROR", "error");
+      onLog("", "error");
+      onLog(`${errorMessage}`, "error");
+      onLog("", "log");
       console.error("Build error:", error);
     } finally {
       setIsBuilding(false);

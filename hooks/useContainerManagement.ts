@@ -53,7 +53,7 @@ export function useContainerManagement({
         // Store container name for LSP connection
         if (data.containerName) {
           setContainerName(data.containerName);
-          logToTerminal(`📦 Container: ${data.containerName}`, "info");
+          logToTerminal(` Container: ${data.containerName}`, "info");
         }
 
         // Log any setup output
@@ -150,7 +150,7 @@ export function useContainerManagement({
         const prefix = walletAddress.slice(0, 10).toLowerCase();
         const derivedContainerName = `soroban-${prefix}`;
         setContainerName(derivedContainerName);
-        logToTerminalRef.current(`📦 Connected to container: ${derivedContainerName}`, "info");
+        logToTerminalRef.current(` Connected to container: ${derivedContainerName}`, "info");
       }
     } catch (error) {
       console.error("Failed to check container health:", error);

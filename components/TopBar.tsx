@@ -29,6 +29,7 @@ interface TopBarProps {
   onLog: (message: string, type: "log" | "error" | "warn" | "info") => void;
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export default function TopBar({
   userId,
   connected,
@@ -50,9 +51,11 @@ export default function TopBar({
   onToggleLeftComponent,
   onLog,
 }: TopBarProps) {
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [copied, setCopied] = useState(false);
 
   const truncateAddress = (address: string) => {
+    if (!address) return "";
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
@@ -85,8 +88,11 @@ export default function TopBar({
             onClick={handleCopyAddress}
             className="text-xs text-gray-500 hover:text-white hover:bg-white/10 px-2 py-1 rounded transition-all flex items-center gap-1"
             title="Click to copy wallet address"
+            suppressHydrationWarning
           >
-            <span>Wallet: {truncateAddress(userId)}</span>
+            <span suppressHydrationWarning>
+              Wallet: {truncateAddress(userId)}
+            </span>
             {copied ? (
               <Check size={14} className="text-green-400" />
             ) : (

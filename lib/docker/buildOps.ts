@@ -21,10 +21,23 @@ export async function buildContract(userId: string, projectName?: string) {
     const containerName = getContainerName(userId);
     const workspacePath = getWorkspacePath();
     const projectDir = projectName ? `${workspacePath}/${projectName}` : `${workspacePath}/soroban-hello-world`;
+    const wasmPath = `${projectDir}/target/wasm32v1-none/release/hello_world.wasm`;
+    const wasmDepsPath = `${projectDir}/target/wasm32v1-none/release/deps/hello_world.wasm`;
 
     console.log(`Building contract in container: ${containerName}`);
     console.log(`Project name received: ${projectName || '(undefined - using default)'}`);
     console.log(`Project directory: ${projectDir}`);
+
+    // STEP 0: Ensure we don't use stale WASM from a previous build
+    console.log('=== STEP 0: Clean previous WASM artifacts (if any) ===');
+    try {
+      await execAsync(
+        `docker exec ${containerName} sh -c "rm -f ${wasmPath} ${wasmDepsPath} 2>/dev/null || true"`
+      );
+      console.log('Old WASM artifacts (if any) deleted');
+    } catch (cleanErr: any) {
+      console.warn('Warning: Failed to delete previous WASM artifacts:', cleanErr?.message || cleanErr);
+    }
 
     console.log('=== STEP 1: Verify project directory exists ===');
     const { stdout: dirCheck } = await execAsync(
@@ -54,7 +67,6 @@ export async function buildContract(userId: string, projectName?: string) {
     console.log('Build artifacts:', targetList);
 
     // Now check for the specific WASM file
-    const wasmPath = `${projectDir}/target/wasm32v1-none/release/hello_world.wasm`;
     console.log('Looking for WASM at:', wasmPath);
 
     const { stdout: wasmCheck } = await execAsync(

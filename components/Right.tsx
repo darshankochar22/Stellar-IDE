@@ -147,17 +147,17 @@ export default function Right({
     checkAndSetContainerName,
   } = useContainerManagement({
     walletAddress: wallet.walletAddress || "not-connected",
-    logToTerminal,
-    onContainerLoading: setContainerLoading,
-    onError: setError,
-    onTerminalOpen: setTerminalOpen,
-    onLoadFiles: loadFiles,
-    onClearFiles: () => {
-      setFiles([]);
-      setOpenFile(null);
-      setFileContents(new Map());
-    },
-  });
+      logToTerminal,
+      onContainerLoading: setContainerLoading,
+      onError: setError,
+      onTerminalOpen: setTerminalOpen,
+      onLoadFiles: loadFiles,
+      onClearFiles: () => {
+        setFiles([]);
+        setOpenFile(null);
+        setFileContents(new Map());
+      },
+    });
 
   // Check for existing container when wallet connects
   useEffect(() => {
