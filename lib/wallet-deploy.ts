@@ -37,18 +37,40 @@ export async function deployWithWallet(
     logToTerminal(`✓ Contract built (${buildData.wasmSize} bytes)`, "log");
 
     // 2. Connect wallet
-    const connectionStatus = await isConnected();
+    logToTerminal("Checking Freighter connection...", "info");
+    
+    let connectionStatus;
+    try {
+      connectionStatus = await isConnected();
+      console.log("[Deploy] Freighter isConnected:", connectionStatus);
+    } catch (e) {
+      throw new Error("Freighter extension not found. Please install Freighter wallet.");
+    }
+    
     if (!connectionStatus.isConnected) {
       logToTerminal("Requesting wallet access...", "warn");
-      const access = await setAllowed();
-      if (!access.isAllowed) {
-        throw new Error("Wallet access denied by user");
+      try {
+        const access = await setAllowed();
+        console.log("[Deploy] setAllowed result:", access);
+        if (!access.isAllowed) {
+          throw new Error("Wallet access denied by user. Please approve the Freighter popup.");
+        }
+      } catch (e: any) {
+        throw new Error(`Wallet access request failed: ${e.message}`);
       }
     }
 
-    const addressData = await getAddress();
+    logToTerminal("Getting wallet address...", "info");
+    let addressData;
+    try {
+      addressData = await getAddress();
+      console.log("[Deploy] getAddress result:", addressData);
+    } catch (e: any) {
+      throw new Error(`Failed to get address from Freighter: ${e.message}. Make sure Freighter is unlocked.`);
+    }
+    
     if (!addressData || !addressData.address) {
-      throw new Error("Could not get wallet address. Make sure you have approved wallet access in Freighter.");
+      throw new Error("Could not get wallet address. Please unlock Freighter and try again.");
     }
     const { address } = addressData;
 

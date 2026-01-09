@@ -81,16 +81,20 @@ export function useContainerManagement({
 
   // Delete Container
   const handleDeleteContainer = useCallback(async () => {
+    console.log("[Delete] handleDeleteContainer called with wallet:", walletAddress);
+    
     if (!confirm(`Delete container for wallet ${walletAddress}?`)) {
+      console.log("[Delete] User cancelled container deletion");
       return;
     }
 
     onContainerLoading(true);
     onError(null);
-    onTerminalOpen(true); // Auto-open terminal
+    onTerminalOpen(true);
     logToTerminal("Deleting Docker container...", "info");
 
     try {
+      console.log("[Delete] Sending delete container request");
       const response = await fetch("/api/docker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,19 +102,21 @@ export function useContainerManagement({
       });
 
       const data = await response.json();
+      console.log("[Delete] Container delete response:", data);
 
       if (data.success) {
         logToTerminal(`✓ ${data.message}`, "log");
         setContainerName(null);
         onClearFiles();
+        // Reset check refs so container can be recreated
+        hasCheckedRef.current = false;
+        lastWalletRef.current = null;
       } else {
-        logToTerminal(
-          `✗ Failed to delete container: ${data.error}`,
-          "error"
-        );
+        logToTerminal(`✗ Failed to delete container: ${data.error}`, "error");
         onError(`Failed to delete container: ${data.error}`);
       }
     } catch (error) {
+      console.error("[Delete] Container deletion error:", error);
       logToTerminal(`✗ Failed to delete container: ${error}`, "error");
       onError("Failed to delete container");
     } finally {

@@ -118,6 +118,7 @@ export default function Right({
     fontSize,
     onFontSizeChange: setFontSize,
     editorRef,
+    onToggleTerminal: () => setTerminalOpen((prev) => !prev),
   });
 
   // Tab Management hook

@@ -8,6 +8,7 @@ interface UseKeyboardShortcutsProps {
   fontSize: number;
   onFontSizeChange: (fontSize: number) => void;
   editorRef: React.RefObject<editor.IStandaloneCodeEditor | null>;
+  onToggleTerminal?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -15,6 +16,7 @@ export function useKeyboardShortcuts({
   fontSize,
   onFontSizeChange,
   editorRef,
+  onToggleTerminal,
 }: UseKeyboardShortcutsProps) {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -22,6 +24,14 @@ export function useKeyboardShortcuts({
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         onSave();
+      }
+
+      // Toggle Terminal: CMD/CTRL + J
+      if ((e.metaKey || e.ctrlKey) && e.key === "j") {
+        e.preventDefault();
+        if (onToggleTerminal) {
+          onToggleTerminal();
+        }
       }
 
       // Zoom In: CMD/CTRL + = or CMD/CTRL + SHIFT + I
@@ -62,6 +72,6 @@ export function useKeyboardShortcuts({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [fontSize, onSave, onFontSizeChange, editorRef]);
+  }, [fontSize, onSave, onFontSizeChange, editorRef, onToggleTerminal]);
 }
 

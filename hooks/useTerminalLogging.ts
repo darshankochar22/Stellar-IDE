@@ -21,16 +21,16 @@ export function useTerminalLogging({ onLogsUpdate }: UseTerminalLoggingProps) {
     (message: string, type: "log" | "error" | "warn" | "info" = "log") => {
       // Use setTimeout to defer state update and avoid render conflicts
       setTimeout(() => {
-        const now = new Date();
-        const timestamp = now.toLocaleTimeString();
+      const now = new Date();
+      const timestamp = now.toLocaleTimeString();
         onLogsUpdateRef.current([
-          {
-            id: messageCountRef.current++,
-            message,
-            timestamp,
-            type,
-          },
-        ]);
+        {
+          id: messageCountRef.current++,
+          message,
+          timestamp,
+          type,
+        },
+      ]);
       }, 0);
     },
     []
