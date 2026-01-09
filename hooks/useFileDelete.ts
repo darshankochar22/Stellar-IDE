@@ -1,4 +1,7 @@
-"use client";
+/**
+ * File Delete Hook
+ * Handles deletion of files and folders
+ */
 
 import { useCallback } from "react";
 
@@ -15,65 +18,41 @@ type LogFunction = (
   type: "log" | "error" | "warn" | "info"
 ) => void;
 
+interface UseFileDeleteProps {
+  userId: string;
+  onLog: LogFunction;
+  onError: (error: string | null) => void;
+  onSetTerminalOpen: (open: boolean) => void;
+  projectName?: string;
+}
+
+interface UseFileDeleteReturn {
+  handleDeleteFile: (
+    filePath: string,
+    openFile: FileNode | null,
+    onLoadFiles: () => Promise<void>,
+    onSetOpenFile: (file: FileNode | null) => void,
+    onSetFileContents: (cb: (prev: Map<string, string>) => Map<string, string>) => void
+  ) => Promise<void>;
+  handleDeleteFolder: (
+    folderPath: string,
+    openFile: FileNode | null,
+    onLoadFiles: () => Promise<void>,
+    onSetOpenFile: (file: FileNode | null) => void,
+    onSetExpandedFolders: (cb: (prev: Set<string>) => Set<string>) => void
+  ) => Promise<void>;
+}
+
 /**
- * Hook to manage file loading and deletion operations
- * Handles API calls for loading file tree and deleting files/folders
+ * Hook to manage file and folder deletion operations
  */
-export function useFileOperations(
-  userId: string,
-  onLog: LogFunction,
-  onError: (error: string | null) => void,
-  onSetTerminalOpen: (open: boolean) => void,
-  buildFileTree: (flatFiles: string[]) => FileNode[],
-  projectName?: string
-) {
-  /**
-   * Load files from container and build tree
-   * @param preserveExpanded Whether to preserve current expanded folders
-   * @param onSetFiles Callback to update files state
-   * @param onSetExpandedFolders Callback to update expanded folders state
-   */
-  const loadFiles = useCallback(
-    async (
-      preserveExpanded: boolean,
-      onSetFiles: (files: FileNode[]) => void,
-      onSetExpandedFolders: (cb: (prev: Set<string>) => Set<string>) => void,
-      projectNameParam?: string
-    ) => {
-      onError(null);
-      try {
-        const response = await fetch("/api/docker", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            action: "getFiles", 
-            walletAddress: userId, // userId parameter contains wallet address
-            projectName: projectNameParam || projectName
-          }),
-        });
-        const data = await response.json();
-
-        if (data.success && data.files) {
-          const tree = buildFileTree(data.files);
-          onSetFiles(tree);
-
-          if (!preserveExpanded) {
-            const commonFolders = ["src", "contracts", "soroban-hello-world"];
-            onSetExpandedFolders(() => new Set(commonFolders));
-          }
-        } else {
-          onError(data.error || "Failed to load files");
-          onSetFiles([]);
-        }
-      } catch (error) {
-        console.error("Failed to load files:", error);
-        onError("Failed to connect to server");
-        onSetFiles([]);
-      }
-    },
-    [userId, onError, buildFileTree, projectName]
-  );
-
+export function useFileDelete({
+  userId,
+  onLog,
+  onError,
+  onSetTerminalOpen,
+  projectName,
+}: UseFileDeleteProps): UseFileDeleteReturn {
   /**
    * Delete a file from container
    * @param filePath Path of the file to delete
@@ -207,9 +186,7 @@ export function useFileOperations(
   );
 
   return {
-    loadFiles,
     handleDeleteFile,
     handleDeleteFolder,
   };
 }
-

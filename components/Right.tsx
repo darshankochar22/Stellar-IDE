@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import { type LogMessage } from "./Terminal";
+import { useEffect } from "react";
 import Sidebar from "./Sidebar";
 import EditorPanel from "./EditorPanel";
 import TopBar from "./TopBar";
@@ -15,14 +14,8 @@ import { useTerminalLogging } from "../hooks/useTerminalLogging";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { useTabManagement } from "../hooks/useTabManagement";
 import { useEditorState } from "../hooks/useEditorState";
-
-type FileNode = {
-  name: string;
-  type: "file" | "folder";
-  path: string;
-  content?: string;
-  children?: FileNode[];
-};
+import { useRightState } from "../hooks/useRightState";
+import { useRightHandlers } from "../hooks/useRightHandlers";
 
 interface RightProps {
   sidebarVisible?: boolean;
@@ -43,19 +36,23 @@ export default function Right({
   leftComponentVisible = false,
   projectName,
 }: RightProps) {
-  const [fontSize, setFontSize] = useState(14);
-  const [containerLoading, setContainerLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [terminalOpen, setTerminalOpen] = useState(terminalVisible);
-  const [logs, setLogs] = useState<LogMessage[]>([]);
-  const [terminalHeight, setTerminalHeight] = useState(250);
-  const [mounted, setMounted] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  // Prevent hydration mismatch - wallet state comes from localStorage
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // State management
+  const {
+    fontSize,
+    setFontSize,
+    containerLoading,
+    setContainerLoading,
+    error,
+    setError,
+    terminalOpen,
+    setTerminalOpen,
+    logs,
+    setLogs,
+    terminalHeight,
+    setTerminalHeight,
+    mounted,
+    containerRef,
+  } = useRightState({ terminalVisible });
 
   const { logToTerminal } = useTerminalLogging({
     onLogsUpdate: (newLogs) => {
@@ -147,17 +144,29 @@ export default function Right({
     checkAndSetContainerName,
   } = useContainerManagement({
     walletAddress: wallet.walletAddress || "not-connected",
-      logToTerminal,
-      onContainerLoading: setContainerLoading,
-      onError: setError,
-      onTerminalOpen: setTerminalOpen,
-      onLoadFiles: loadFiles,
-      onClearFiles: () => {
-        setFiles([]);
-        setOpenFile(null);
-        setFileContents(new Map());
-      },
-    });
+    logToTerminal,
+    onContainerLoading: setContainerLoading,
+    onError: setError,
+    onTerminalOpen: setTerminalOpen,
+    onLoadFiles: loadFiles,
+    onClearFiles: () => {
+      setFiles([]);
+      setOpenFile(null);
+      setFileContents(new Map());
+    },
+  });
+
+  // Event handlers
+  const {
+    handleFileClickWrapper,
+    handleCreateFileRoot,
+    handleCreateFolderRoot,
+  } = useRightHandlers({
+    handleFileClick,
+    addOpenFile,
+    handleCreateFile,
+    handleCreateFolder,
+  });
 
   // Check for existing container when wallet connects
   useEffect(() => {
@@ -165,49 +174,6 @@ export default function Right({
       checkAndSetContainerName();
     }
   }, [wallet.isConnected, wallet.walletAddress, checkAndSetContainerName]);
-
-  // Store callbacks in refs to avoid dependency chains
-  const handleFileClickRef = useRef(handleFileClick);
-  const addOpenFileRef = useRef(addOpenFile);
-
-  useEffect(() => {
-    handleFileClickRef.current = handleFileClick;
-    addOpenFileRef.current = addOpenFile;
-  }, [handleFileClick, addOpenFile]);
-
-  // FILE CLICK WRAPPER - Sync with openFiles TabBar state
-  // Memoized without dependencies to prevent callback redefinition
-  const handleFileClickWrapper = useMemo(
-    () => async (file: FileNode) => {
-      await handleFileClickRef.current(file);
-      addOpenFileRef.current(file);
-    },
-    []
-  );
-
-  // Memoize root file/folder creation handlers to prevent Sidebar re-renders
-  // Use refs to avoid dependencies
-  const handleCreateFileRef = useRef(handleCreateFile);
-  const handleCreateFolderRef = useRef(handleCreateFolder);
-
-  useEffect(() => {
-    handleCreateFileRef.current = handleCreateFile;
-    handleCreateFolderRef.current = handleCreateFolder;
-  }, [handleCreateFile, handleCreateFolder]);
-
-  const handleCreateFileRoot = useMemo(
-    () => () => handleCreateFileRef.current(""),
-    []
-  );
-
-  const handleCreateFolderRoot = useMemo(
-    () => () => handleCreateFolderRef.current(""),
-    []
-  );
-
-  useEffect(() => {
-    setTerminalOpen(terminalVisible);
-  }, [terminalVisible]);
 
   // Deploy Contract: hooks/archived/useContractDeployment.ts
   // Create Account: hooks/archived/useAccountCreation.ts

@@ -21,6 +21,7 @@ import { registerReferenceProvider } from "./referenceProvider";
 import { registerRenameProvider } from "./renameProvider";
 import { registerFormatProvider } from "./formatProvider";
 import { registerCodeActionProvider } from "./codeActionProvider";
+import { registerDocumentSymbolProvider } from "./documentSymbolProvider";
 import { useEditorZoom } from "./useEditorZoom";
 
 interface MonacoEditorProps {
@@ -37,6 +38,7 @@ interface MonacoEditorProps {
   requestRename?: LSPFunctionsRef["requestRename"];
   requestFormatting?: LSPFunctionsRef["requestFormatting"];
   requestCodeAction?: LSPFunctionsRef["requestCodeAction"];
+  requestDocumentSymbols?: LSPFunctionsRef["requestDocumentSymbols"];
   onChange: (value: string | undefined) => void;
   onMount: (editor: MonacoEditorType, monaco: MonacoType) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -56,6 +58,7 @@ export default function MonacoEditorWrapper({
   requestRename,
   requestFormatting,
   requestCodeAction,
+  requestDocumentSymbols,
   onChange,
   onMount,
   containerRef,
@@ -83,6 +86,7 @@ export default function MonacoEditorWrapper({
         requestRename,
         requestFormatting,
         requestCodeAction,
+        requestDocumentSymbols,
       };
 
       // Register language providers (only once each)
@@ -94,6 +98,7 @@ export default function MonacoEditorWrapper({
       registerRenameProvider(monaco);
       registerFormatProvider(monaco);
       registerCodeActionProvider(monaco);
+      registerDocumentSymbolProvider(monaco);
 
       // Add wheel zoom handler
       if (containerRef.current) {
@@ -123,6 +128,7 @@ export default function MonacoEditorWrapper({
       requestRename,
       requestFormatting,
       requestCodeAction,
+      requestDocumentSymbols,
       onMount,
       containerRef,
       handleMouseWheel,

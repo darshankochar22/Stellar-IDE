@@ -46,5 +46,7 @@ export {
   requestSignatureHelp,
   requestFormatting,
   requestCodeAction,
+  requestDocumentSymbols,
   type CodeAction,
+  type DocumentSymbol,
 } from './requests';

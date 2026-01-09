@@ -4,7 +4,8 @@ import { useEffect, useCallback, useRef } from "react";
 import { useFileTree } from "./useFileTree";
 import { useFileCache } from "./useFileCache";
 import { useFileCreation } from "./useFileCreation";
-import { useFileOperations } from "./useFileOperations";
+import { useFileLoad } from "./useFileLoad";
+import { useFileDelete } from "./useFileDelete";
 
 type FileNode = {
   name: string;
@@ -78,15 +79,22 @@ export function useFileManager(
     handleSave,
   } = useFileCache(userId, onLog, onError, projectName);
 
-  // File operations (load, delete)
-  const { loadFiles: loadFilesImpl, handleDeleteFile: deleteFileImpl, handleDeleteFolder: deleteFolderImpl } = useFileOperations(
+  // File loading
+  const { loadFiles: loadFilesImpl } = useFileLoad({
+    userId,
+    onError,
+    buildFileTree,
+    projectName,
+  });
+
+  // File deletion
+  const { handleDeleteFile: deleteFileImpl, handleDeleteFolder: deleteFolderImpl } = useFileDelete({
     userId,
     onLog,
     onError,
     onSetTerminalOpen,
-    buildFileTree,
-    projectName
-  );
+    projectName,
+  });
 
   // Wrapper for loadFiles to match expected signature
   const loadFilesWrapper = useCallback(

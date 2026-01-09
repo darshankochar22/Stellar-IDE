@@ -6,6 +6,7 @@ import type { editor } from "monaco-editor";
 import type { Monaco } from "@monaco-editor/react";
 import type { LogMessage } from "../Terminal";
 import type { OpenFile } from "../TabBar";
+import type { DocumentSymbol } from "../../lib/lsp/requests";
 
 export type MonacoType = Monaco;
 export type MonacoEditor = editor.IStandaloneCodeEditor;
@@ -75,6 +76,7 @@ export interface LSPFunctionsRef {
     range: { start: { line: number; character: number }; end: { line: number; character: number } },
     context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }
   ) => Promise<unknown[]>;
+  requestDocumentSymbols?: (uri: string) => Promise<DocumentSymbol[]>;
 }
 
 export interface InlayHint {
@@ -84,6 +86,9 @@ export interface InlayHint {
   paddingLeft?: boolean;
   paddingRight?: boolean;
 }
+
+// Re-export DocumentSymbol from requests for convenience
+export type { DocumentSymbol };
 
 export interface InlayHintsCache {
   uri: string;
