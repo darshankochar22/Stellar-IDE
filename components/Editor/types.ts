@@ -56,6 +56,11 @@ export interface LSPFunctionsRef {
     position: { line: number; character: number }
   ) => Promise<unknown[]>;
   requestFormatting?: (uri: string) => Promise<unknown[]>;
+  requestCodeAction?: (
+    uri: string,
+    range: { start: { line: number; character: number }; end: { line: number; character: number } },
+    context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }
+  ) => Promise<unknown[]>;
 }
 
 export interface InlayHint {

@@ -18,6 +18,7 @@ import { registerCompletionProvider } from "./completionProvider";
 import { registerHoverProvider } from "./hoverProvider";
 import { registerDefinitionProvider } from "./definitionProvider";
 import { registerFormatProvider } from "./formatProvider";
+import { registerCodeActionProvider } from "./codeActionProvider";
 import { useEditorZoom } from "./useEditorZoom";
 
 interface MonacoEditorProps {
@@ -30,6 +31,7 @@ interface MonacoEditorProps {
   requestHover?: LSPFunctionsRef["requestHover"];
   requestDefinition?: LSPFunctionsRef["requestDefinition"];
   requestFormatting?: LSPFunctionsRef["requestFormatting"];
+  requestCodeAction?: LSPFunctionsRef["requestCodeAction"];
   onChange: (value: string | undefined) => void;
   onMount: (editor: MonacoEditorType, monaco: MonacoType) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
@@ -45,6 +47,7 @@ export default function MonacoEditorWrapper({
   requestHover,
   requestDefinition,
   requestFormatting,
+  requestCodeAction,
   onChange,
   onMount,
   containerRef,
@@ -68,6 +71,7 @@ export default function MonacoEditorWrapper({
         requestHover,
         requestDefinition,
         requestFormatting,
+        requestCodeAction,
       };
 
       // Register language providers (only once each)
@@ -76,6 +80,7 @@ export default function MonacoEditorWrapper({
       registerHoverProvider(monaco);
       registerDefinitionProvider(monaco);
       registerFormatProvider(monaco);
+      registerCodeActionProvider(monaco);
 
       // Add wheel zoom handler
       if (containerRef.current) {
@@ -101,6 +106,7 @@ export default function MonacoEditorWrapper({
       requestHover,
       requestDefinition,
       requestFormatting,
+      requestCodeAction,
       onMount,
       containerRef,
       handleMouseWheel,

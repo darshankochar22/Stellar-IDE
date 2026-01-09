@@ -52,6 +52,7 @@ export default function EditorPanel({
     requestHover,
     requestDefinition,
     requestFormatting,
+    requestCodeAction,
   } = useLSPClient(containerId, fileUri);
 
   // Debug logging
@@ -103,6 +104,7 @@ export default function EditorPanel({
               requestHover={requestHover}
               requestDefinition={requestDefinition}
               requestFormatting={requestFormatting}
+              requestCodeAction={requestCodeAction}
               onChange={onEditorChange}
               onMount={onEditorMount}
               containerRef={containerRef}

@@ -42,4 +42,6 @@ export {
   requestDefinition,
   requestSignatureHelp,
   requestFormatting,
+  requestCodeAction,
+  type CodeAction,
 } from './requests';

@@ -365,6 +365,66 @@ export function requestFormatting(
   });
 }
 
+/**
+ * Request code actions from LSP
+ */
+export function requestCodeAction(
+  ws: WebSocket,
+  uri: string,
+  range: { start: { line: number; character: number }; end: { line: number; character: number } },
+  context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> },
+  timeout = 5000
+): Promise<CodeAction[]> {
+  return new Promise((resolve) => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      resolve([]);
+      return;
+    }
+
+    const requestId = createRequestId();
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.id === requestId) {
+          ws.removeEventListener('message', handleMessage);
+          const result = message.result;
+          // Handle both array and {commands: []} or {codeActions: []} formats
+          if (Array.isArray(result)) {
+            resolve(result);
+          } else if (result?.commands) {
+            resolve(result.commands);
+          } else if (result?.codeActions) {
+            resolve(result.codeActions);
+          } else {
+            resolve([]);
+          }
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.addEventListener('message', handleMessage);
+
+    setTimeout(() => {
+      ws.removeEventListener('message', handleMessage);
+      resolve([]);
+    }, timeout);
+
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'textDocument/codeAction',
+      params: {
+        textDocument: { uri },
+        range,
+        context,
+      },
+      id: requestId,
+    }));
+  });
+}
+
 // TextEdit interface for formatting
 interface TextEdit {
   range: {
@@ -372,4 +432,25 @@ interface TextEdit {
     end: { line: number; character: number };
   };
   newText: string;
+}
+
+// CodeAction interface
+export interface CodeAction {
+  title: string;
+  kind?: string;
+  diagnostics?: Array<{
+    range: { start: { line: number; character: number }; end: { line: number; character: number } };
+    severity: number;
+    code?: string | number;
+    message: string;
+  }>;
+  edit?: {
+    changes?: Record<string, TextEdit[]>;
+  };
+  command?: {
+    command: string;
+    title: string;
+    arguments?: unknown[];
+  };
+  isPreferred?: boolean;
 }

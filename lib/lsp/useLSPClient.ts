@@ -17,6 +17,8 @@ import {
   requestDefinition as sendDefinitionRequest,
   requestSignatureHelp as sendSignatureHelpRequest,
   requestFormatting as sendFormattingRequest,
+  requestCodeAction as sendCodeActionRequest,
+  CodeAction,
 } from './requests';
 
 interface UseLSPClientReturn {
@@ -31,6 +33,7 @@ interface UseLSPClientReturn {
   requestDefinition: (uri: string, position: { line: number; character: number }) => Promise<unknown[]>;
   requestSignatureHelp: (uri: string, position: { line: number; character: number }) => Promise<unknown | null>;
   requestFormatting: (uri: string) => Promise<unknown[]>;
+  requestCodeAction: (uri: string, range: { start: { line: number; character: number }; end: { line: number; character: number } }, context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }) => Promise<CodeAction[]>;
   wsRef: React.RefObject<WebSocket | null>;
 }
 
@@ -262,6 +265,22 @@ export function useLSPClient(
     []
   );
 
+  // Request code actions
+  const requestCodeAction = useCallback(
+    (
+      uri: string,
+      range: { start: { line: number; character: number }; end: { line: number; character: number } },
+      context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }
+    ): Promise<CodeAction[]> => {
+      const ws = wsRef.current;
+      if (!ws || !isInitializedRef.current) {
+        return Promise.resolve([]);
+      }
+      return sendCodeActionRequest(ws, uri, range, context);
+    },
+    []
+  );
+
   return {
     isConnected,
     connectionError,
@@ -274,6 +293,7 @@ export function useLSPClient(
     requestDefinition,
     requestSignatureHelp,
     requestFormatting,
+    requestCodeAction,
     wsRef,
   };
 }
