@@ -41,6 +41,8 @@ export {
   requestCompletion,
   requestDefinition,
   requestReferences,
+  requestPrepareRename,
+  requestRename,
   requestSignatureHelp,
   requestFormatting,
   requestCodeAction,

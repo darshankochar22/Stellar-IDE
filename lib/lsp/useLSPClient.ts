@@ -16,6 +16,8 @@ import {
   requestCompletion as sendCompletionRequest,
   requestDefinition as sendDefinitionRequest,
   requestReferences as sendReferencesRequest,
+  requestPrepareRename as sendPrepareRenameRequest,
+  requestRename as sendRenameRequest,
   requestSignatureHelp as sendSignatureHelpRequest,
   requestFormatting as sendFormattingRequest,
   requestCodeAction as sendCodeActionRequest,
@@ -33,6 +35,8 @@ interface UseLSPClientReturn {
   requestCompletion: (uri: string, position: { line: number; character: number }) => Promise<unknown[]>;
   requestDefinition: (uri: string, position: { line: number; character: number }) => Promise<unknown[]>;
   requestReferences: (uri: string, position: { line: number; character: number }, context?: { includeDeclaration?: boolean }) => Promise<unknown[]>;
+  requestPrepareRename: (uri: string, position: { line: number; character: number }) => Promise<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; placeholder?: string } | null>;
+  requestRename: (uri: string, position: { line: number; character: number }, newName: string) => Promise<unknown>;
   requestSignatureHelp: (uri: string, position: { line: number; character: number }) => Promise<unknown | null>;
   requestFormatting: (uri: string) => Promise<unknown[]>;
   requestCodeAction: (uri: string, range: { start: { line: number; character: number }; end: { line: number; character: number } }, context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }) => Promise<CodeAction[]>;
@@ -255,6 +259,30 @@ export function useLSPClient(
     []
   );
 
+  // Request prepare rename
+  const requestPrepareRename = useCallback(
+    (uri: string, position: { line: number; character: number }): Promise<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; placeholder?: string } | null> => {
+      const ws = wsRef.current;
+      if (!ws || !isInitializedRef.current) {
+        return Promise.resolve(null);
+      }
+      return sendPrepareRenameRequest(ws, uri, position);
+    },
+    []
+  );
+
+  // Request rename
+  const requestRename = useCallback(
+    (uri: string, position: { line: number; character: number }, newName: string): Promise<unknown> => {
+      const ws = wsRef.current;
+      if (!ws || !isInitializedRef.current) {
+        return Promise.resolve(null);
+      }
+      return sendRenameRequest(ws, uri, position, newName);
+    },
+    []
+  );
+
   // Request signature help
   const requestSignatureHelp = useCallback(
     (uri: string, position: { line: number; character: number }): Promise<unknown | null> => {
@@ -306,6 +334,8 @@ export function useLSPClient(
     requestCompletion,
     requestDefinition,
     requestReferences,
+    requestPrepareRename,
+    requestRename,
     requestSignatureHelp,
     requestFormatting,
     requestCodeAction,

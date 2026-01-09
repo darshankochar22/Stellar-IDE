@@ -52,6 +52,8 @@ export default function EditorPanel({
     requestHover,
     requestDefinition,
     requestReferences,
+    requestPrepareRename,
+    requestRename,
     requestFormatting,
     requestCodeAction,
   } = useLSPClient(containerId, fileUri);
@@ -105,6 +107,8 @@ export default function EditorPanel({
               requestHover={requestHover}
               requestDefinition={requestDefinition}
               requestReferences={requestReferences}
+              requestPrepareRename={requestPrepareRename}
+              requestRename={requestRename}
               requestFormatting={requestFormatting}
               requestCodeAction={requestCodeAction}
               onChange={onEditorChange}

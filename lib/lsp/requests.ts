@@ -485,6 +485,120 @@ interface TextEdit {
   newText: string;
 }
 
+/**
+ * Request prepare rename (check if rename is possible)
+ */
+export function requestPrepareRename(
+  ws: WebSocket,
+  uri: string,
+  position: { line: number; character: number },
+  timeout = 3000
+): Promise<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; placeholder?: string } | null> {
+  return new Promise((resolve) => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      resolve(null);
+      return;
+    }
+
+    const requestId = createRequestId();
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.id === requestId) {
+          ws.removeEventListener('message', handleMessage);
+          if (message.error) {
+            resolve(null);
+            return;
+          }
+          const result = message.result;
+          if (!result) {
+            resolve(null);
+            return;
+          }
+          // Result can be { range, placeholder } or just { range }
+          resolve(result);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.addEventListener('message', handleMessage);
+
+    setTimeout(() => {
+      ws.removeEventListener('message', handleMessage);
+      resolve(null);
+    }, timeout);
+
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'textDocument/prepareRename',
+      params: {
+        textDocument: { uri },
+        position,
+      },
+      id: requestId,
+    }));
+  });
+}
+
+/**
+ * Request rename symbol
+ */
+export function requestRename(
+  ws: WebSocket,
+  uri: string,
+  position: { line: number; character: number },
+  newName: string,
+  timeout = 5000
+): Promise<{ changes?: Record<string, TextEdit[]> } | null> {
+  return new Promise((resolve) => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      resolve(null);
+      return;
+    }
+
+    const requestId = createRequestId();
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.id === requestId) {
+          ws.removeEventListener('message', handleMessage);
+          if (message.error) {
+            console.error('[Rename] Error:', message.error);
+            resolve(null);
+            return;
+          }
+          const result = message.result;
+          resolve(result || null);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.addEventListener('message', handleMessage);
+
+    setTimeout(() => {
+      ws.removeEventListener('message', handleMessage);
+      resolve(null);
+    }, timeout);
+
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'textDocument/rename',
+      params: {
+        textDocument: { uri },
+        position,
+        newName,
+      },
+      id: requestId,
+    }));
+  });
+}
+
 // CodeAction interface
 export interface CodeAction {
   title: string;

@@ -60,6 +60,15 @@ export interface LSPFunctionsRef {
     position: { line: number; character: number },
     context?: { includeDeclaration?: boolean }
   ) => Promise<unknown[]>;
+  requestPrepareRename?: (
+    uri: string,
+    position: { line: number; character: number }
+  ) => Promise<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; placeholder?: string } | null>;
+  requestRename?: (
+    uri: string,
+    position: { line: number; character: number },
+    newName: string
+  ) => Promise<unknown>;
   requestFormatting?: (uri: string) => Promise<unknown[]>;
   requestCodeAction?: (
     uri: string,

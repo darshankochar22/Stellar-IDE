@@ -18,6 +18,7 @@ import { registerCompletionProvider } from "./completionProvider";
 import { registerHoverProvider } from "./hoverProvider";
 import { registerDefinitionProvider } from "./definitionProvider";
 import { registerReferenceProvider } from "./referenceProvider";
+import { registerRenameProvider } from "./renameProvider";
 import { registerFormatProvider } from "./formatProvider";
 import { registerCodeActionProvider } from "./codeActionProvider";
 import { useEditorZoom } from "./useEditorZoom";
@@ -32,6 +33,8 @@ interface MonacoEditorProps {
   requestHover?: LSPFunctionsRef["requestHover"];
   requestDefinition?: LSPFunctionsRef["requestDefinition"];
   requestReferences?: LSPFunctionsRef["requestReferences"];
+  requestPrepareRename?: LSPFunctionsRef["requestPrepareRename"];
+  requestRename?: LSPFunctionsRef["requestRename"];
   requestFormatting?: LSPFunctionsRef["requestFormatting"];
   requestCodeAction?: LSPFunctionsRef["requestCodeAction"];
   onChange: (value: string | undefined) => void;
@@ -49,6 +52,8 @@ export default function MonacoEditorWrapper({
   requestHover,
   requestDefinition,
   requestReferences,
+  requestPrepareRename,
+  requestRename,
   requestFormatting,
   requestCodeAction,
   onChange,
@@ -74,6 +79,8 @@ export default function MonacoEditorWrapper({
         requestHover,
         requestDefinition,
         requestReferences,
+        requestPrepareRename,
+        requestRename,
         requestFormatting,
         requestCodeAction,
       };
@@ -84,6 +91,7 @@ export default function MonacoEditorWrapper({
       registerHoverProvider(monaco);
       registerDefinitionProvider(monaco);
       registerReferenceProvider(monaco);
+      registerRenameProvider(monaco);
       registerFormatProvider(monaco);
       registerCodeActionProvider(monaco);
 
@@ -111,6 +119,8 @@ export default function MonacoEditorWrapper({
       requestHover,
       requestDefinition,
       requestReferences,
+      requestPrepareRename,
+      requestRename,
       requestFormatting,
       requestCodeAction,
       onMount,

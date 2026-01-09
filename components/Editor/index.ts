@@ -20,6 +20,7 @@ export { registerCompletionProvider } from "./completionProvider";
 export { registerHoverProvider } from "./hoverProvider";
 export { registerDefinitionProvider } from "./definitionProvider";
 export { registerReferenceProvider } from "./referenceProvider";
+export { registerRenameProvider } from "./renameProvider";
 export { registerFormatProvider } from "./formatProvider";
 export { registerCodeActionProvider } from "./codeActionProvider";
 export { getLanguageFromFilename, getEditorOptions, LANGUAGE_MAP } from "./constants";
