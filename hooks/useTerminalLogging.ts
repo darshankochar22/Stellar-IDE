@@ -9,79 +9,36 @@ interface UseTerminalLoggingProps {
 
 export function useTerminalLogging({ onLogsUpdate }: UseTerminalLoggingProps) {
   const messageCountRef = useRef(0);
+  const onLogsUpdateRef = useRef(onLogsUpdate);
+  
+  // Keep ref updated
+  useEffect(() => {
+    onLogsUpdateRef.current = onLogsUpdate;
+  }, [onLogsUpdate]);
 
-  // Log to terminal
+  // Log to terminal - deferred to avoid setState during render
   const logToTerminal = useCallback(
     (message: string, type: "log" | "error" | "warn" | "info" = "log") => {
-      const now = new Date();
-      const timestamp = now.toLocaleTimeString();
-      onLogsUpdate([
-        {
-          id: messageCountRef.current++,
-          message,
-          timestamp,
-          type,
-        },
-      ]);
+      // Use setTimeout to defer state update and avoid render conflicts
+      setTimeout(() => {
+        const now = new Date();
+        const timestamp = now.toLocaleTimeString();
+        onLogsUpdateRef.current([
+          {
+            id: messageCountRef.current++,
+            message,
+            timestamp,
+            type,
+          },
+        ]);
+      }, 0);
     },
-    [onLogsUpdate]
+    []
   );
 
-  // Intercept console methods
-  useEffect(() => {
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
-    const originalInfo = console.info;
-
-    const addLog = (
-      message: unknown,
-      type: "log" | "error" | "warn" | "info"
-    ) => {
-      const now = new Date();
-      const timestamp = now.toLocaleTimeString();
-      const formattedMessage =
-        typeof message === "string"
-          ? message
-          : JSON.stringify(message, null, 2);
-
-      onLogsUpdate([
-        {
-          id: messageCountRef.current++,
-          message: formattedMessage,
-          timestamp,
-          type,
-        },
-      ]);
-    };
-
-    console.log = (...args: any[]) => {
-      addLog(args.length === 1 ? args[0] : args.join(" "), "log");
-      originalLog.apply(console, args as any);
-    };
-
-    console.error = (...args: any[]) => {
-      addLog(args.length === 1 ? args[0] : args.join(" "), "error");
-      originalError.apply(console, args as any);
-    };
-
-    console.warn = (...args: any[]) => {
-      addLog(args.length === 1 ? args[0] : args.join(" "), "warn");
-      originalWarn.apply(console, args as any);
-    };
-
-    console.info = (...args: any[]) => {
-      addLog(args.length === 1 ? args[0] : args.join(" "), "info");
-      originalInfo.apply(console, args as any);
-    };
-
-    return () => {
-      console.log = originalLog;
-      console.error = originalError;
-      console.warn = originalWarn;
-      console.info = originalInfo;
-    };
-  }, [onLogsUpdate]);
+  // Intercept console methods - disabled to prevent render conflicts
+  // Console logs will only show in browser devtools, not in terminal panel
+  // Use logToTerminal explicitly for terminal output
 
   return {
     logToTerminal,

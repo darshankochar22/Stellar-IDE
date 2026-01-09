@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef,useState,useEffect } from "react";
-import Editor from "@monaco-editor/react";
+import { useRef, useEffect } from "react";
+import Editor, { Monaco } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 import Terminal, { type LogMessage } from "./Terminal";
 import TabBar, { type OpenFile } from "./TabBar";
 import BottomBar from "./BottomBar";
-import { useLSPClient } from "../lib/useLSPClient";
+import { useLSPClient, InlayHint } from "../lib/useLSPClient";
 
-type MonacoType = unknown;
-//nn
+// Monaco type from the editor package
+type MonacoType = Monaco;
 type FileNode = {
   name: string;
   type: "file" | "folder";
@@ -21,6 +21,7 @@ type FileNode = {
 interface EditorPanelProps {
   openFile: FileNode | null;
   containerId?: string;
+  projectName?: string;
   openFiles: OpenFile[];
   fileContents: Map<string, string>;
   fontSize: number;
@@ -44,6 +45,7 @@ export default function EditorPanel({
   openFiles,
   fileContents,
   containerId,
+  projectName,
   fontSize,
   terminalOpen,
   terminalHeight,
@@ -59,24 +61,91 @@ export default function EditorPanel({
   const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const accumulatedDeltaRef = useRef(0);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const [isLSPEnabled, setIsLSPEnabled] = useState(false);
 
-  const fileUri = openFile 
-  ? `file:///home/developer/workspace/${openFile.path}`
-  : '';
+  // Build file URI including project name for correct LSP path matching
+  // Default to soroban-hello-world if no project specified
+  const effectiveProjectName = projectName || "soroban-hello-world";
+  const fileUri = openFile
+    ? `file:///home/developer/workspace/${effectiveProjectName}/${openFile.path}`
+    : "";
 
-  const { isConnected, openTextDocument, changeTextDocument } = useLSPClient(
-    containerId,
-    fileUri
-  );
+  const {
+    isConnected,
+    connectionError,
+    diagnosticsCount,
+    openTextDocument,
+    changeTextDocument,
+    requestInlayHints,
+  } = useLSPClient(containerId, fileUri);
 
+  const inlayHintsProviderRef = useRef<{ dispose: () => void } | null>(null);
+
+  // Debug: Log connection status changes
   useEffect(() => {
-    if (isConnected && openFile && fileContents.has(openFile.path)) {
-      const content = fileContents.get(openFile.path) || '';
-      openTextDocument(content);
-      console.log('📄 Opened file in LSP:', openFile.path);
+    console.log(
+      `[EditorPanel] LSP Status - Connected: ${isConnected}, Container: ${containerId}`
+    );
+    console.log(
+      `[EditorPanel] Project: ${effectiveProjectName}, File: ${openFile?.path}`
+    );
+    console.log(`[EditorPanel] Full URI: ${fileUri}`);
+    if (connectionError) {
+      console.error(`[EditorPanel] Connection Error: ${connectionError}`);
     }
-  }, [isConnected, openFile, fileContents, openTextDocument]);
+  }, [
+    isConnected,
+    containerId,
+    connectionError,
+    effectiveProjectName,
+    fileUri,
+    openFile?.path,
+  ]);
+
+  // Open file in LSP when connected (only for Rust files)
+  useEffect(() => {
+    if (
+      isConnected &&
+      openFile &&
+      openFile.name.endsWith(".rs") &&
+      fileContents.has(openFile.path) &&
+      fileUri // Make sure URI is ready
+    ) {
+      const content = fileContents.get(openFile.path) || "";
+      console.log(`[EditorPanel] Opening Rust file in LSP: ${fileUri}`);
+      console.log(`[EditorPanel] Content length: ${content.length} chars`);
+      // Pass URI directly to avoid stale ref
+      openTextDocument(content, fileUri);
+    }
+  }, [isConnected, openFile, fileContents, openTextDocument, fileUri]);
+
+  // Sync content changes to LSP (debounced)
+  const lastContentRef = useRef<string>("");
+  useEffect(() => {
+    if (
+      !isConnected ||
+      !openFile ||
+      !openFile.name.endsWith(".rs") ||
+      !fileUri
+    ) {
+      return;
+    }
+
+    const content = fileContents.get(openFile.path) || "";
+
+    // Only send if content actually changed
+    if (content === lastContentRef.current) {
+      return;
+    }
+
+    lastContentRef.current = content;
+
+    // Debounce changes to avoid flooding LSP
+    const timeoutId = setTimeout(() => {
+      changeTextDocument(content, fileUri);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [isConnected, openFile, fileContents, changeTextDocument, fileUri]);
 
   const handleMouseWheel = (event: WheelEvent) => {
     if (event.ctrlKey || event.metaKey) {
@@ -120,6 +189,69 @@ export default function EditorPanel({
     editorRef.current = editorInstance;
     editorInstance.focus();
 
+    // Store Monaco instance globally for LSP client to access
+    // Use a proper global declaration to ensure it persists
+    const win = window as Window & { monacoInstance?: MonacoType };
+    win.monacoInstance = monaco;
+    console.log(
+      "[EditorPanel] Monaco instance stored globally as window.monacoInstance"
+    );
+
+    // Register inlay hints provider for Rust
+    if (inlayHintsProviderRef.current) {
+      inlayHintsProviderRef.current.dispose();
+    }
+
+    inlayHintsProviderRef.current = monaco.languages.registerInlayHintsProvider(
+      "rust",
+      {
+        provideInlayHints: async (
+          model: editor.ITextModel,
+          range: { startLineNumber: number; endLineNumber: number }
+        ) => {
+          if (!isConnected) return { hints: [], dispose: () => {} };
+
+          const uri = model.uri.toString();
+          console.log("[InlayHints] Requesting hints for", uri);
+
+          const hints = await requestInlayHints(uri, {
+            startLine: range.startLineNumber - 1,
+            endLine: range.endLineNumber - 1,
+          });
+
+          console.log("[InlayHints] Received", hints.length, "hints");
+
+          const monacoHints = hints.map((hint: InlayHint) => {
+            const label =
+              typeof hint.label === "string"
+                ? hint.label
+                : hint.label.map((l) => l.value).join("");
+
+            return {
+              position: {
+                lineNumber: hint.position.line + 1,
+                column: hint.position.character + 1,
+              },
+              label: `: ${label}`,
+              kind:
+                hint.kind === 1
+                  ? monaco.languages.InlayHintKind.Type
+                  : monaco.languages.InlayHintKind.Parameter,
+              paddingLeft: hint.paddingLeft,
+              paddingRight: hint.paddingRight,
+            };
+          });
+
+          return {
+            hints: monacoHints,
+            dispose: () => {},
+          };
+        },
+      }
+    );
+
+    console.log("[EditorPanel] Inlay hints provider registered for Rust");
+
     if (containerRef.current) {
       containerRef.current.addEventListener("wheel", handleMouseWheel, {
         passive: false,
@@ -134,6 +266,9 @@ export default function EditorPanel({
       }
       if (wheelTimeoutRef.current) {
         clearTimeout(wheelTimeoutRef.current);
+      }
+      if (inlayHintsProviderRef.current) {
+        inlayHintsProviderRef.current.dispose();
       }
     };
   }
@@ -181,6 +316,7 @@ export default function EditorPanel({
           {openFile ? (
             <Editor
               height="100%"
+              path={fileUri}
               language={getLanguage(openFile.name)}
               theme="vs-dark"
               value={getFileContent(openFile)}
@@ -246,7 +382,12 @@ export default function EditorPanel({
         )}
       </div>
 
-      <BottomBar openFile={openFile} />
+      <BottomBar
+        openFile={openFile}
+        lspConnected={isConnected}
+        lspError={connectionError}
+        diagnosticsCount={diagnosticsCount}
+      />
     </div>
   );
 }

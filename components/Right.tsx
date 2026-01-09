@@ -49,7 +49,13 @@ export default function Right({
   const [terminalOpen, setTerminalOpen] = useState(terminalVisible);
   const [logs, setLogs] = useState<LogMessage[]>([]);
   const [terminalHeight, setTerminalHeight] = useState(250);
+  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Prevent hydration mismatch - wallet state comes from localStorage
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { logToTerminal } = useTerminalLogging({
     onLogsUpdate: (newLogs) => {
@@ -133,20 +139,31 @@ export default function Right({
   });
 
   // Container Management hook
-  const { handleCreateContainer, handleDeleteContainer } =
-    useContainerManagement({
-      userId: wallet.walletAddress || "not-connected",
-      logToTerminal,
-      onContainerLoading: setContainerLoading,
-      onError: setError,
-      onTerminalOpen: setTerminalOpen,
-      onLoadFiles: loadFiles,
-      onClearFiles: () => {
-        setFiles([]);
-        setOpenFile(null);
-        setFileContents(new Map());
-      },
-    });
+  const {
+    containerName,
+    handleCreateContainer,
+    handleDeleteContainer,
+    checkAndSetContainerName,
+  } = useContainerManagement({
+    walletAddress: wallet.walletAddress || "not-connected",
+    logToTerminal,
+    onContainerLoading: setContainerLoading,
+    onError: setError,
+    onTerminalOpen: setTerminalOpen,
+    onLoadFiles: loadFiles,
+    onClearFiles: () => {
+      setFiles([]);
+      setOpenFile(null);
+      setFileContents(new Map());
+    },
+  });
+
+  // Check for existing container when wallet connects
+  useEffect(() => {
+    if (wallet.isConnected && wallet.walletAddress) {
+      checkAndSetContainerName();
+    }
+  }, [wallet.isConnected, wallet.walletAddress, checkAndSetContainerName]);
 
   // Store callbacks in refs to avoid dependency chains
   const handleFileClickRef = useRef(handleFileClick);
@@ -196,7 +213,7 @@ export default function Right({
 
   return (
     <div className="flex flex-col h-full bg-[#171717] overflow-hidden">
-      {!wallet.isConnected && (
+      {mounted && !wallet.isConnected && (
         <div className="bg-red-900/20 border-b border-red-500/30 p-3 text-red-300 text-sm">
           Please connect your wallet to access the editor
         </div>
@@ -267,6 +284,8 @@ export default function Right({
           openFile={openFile}
           openFiles={openFiles}
           fileContents={fileContents}
+          containerId={containerName || undefined}
+          projectName={projectName}
           fontSize={fontSize}
           terminalOpen={terminalOpen}
           terminalHeight={terminalHeight}

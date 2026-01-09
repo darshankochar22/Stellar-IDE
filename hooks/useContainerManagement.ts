@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 
 interface UseContainerManagementProps {
-  userId: string;
+  walletAddress: string;
   logToTerminal: (message: string, type: "log" | "error" | "warn" | "info") => void;
   onContainerLoading: (loading: boolean) => void;
   onError: (error: string | null) => void;
@@ -13,7 +13,7 @@ interface UseContainerManagementProps {
 }
 
 export function useContainerManagement({
-  userId,
+  walletAddress,
   logToTerminal,
   onContainerLoading,
   onError,
@@ -21,6 +21,16 @@ export function useContainerManagement({
   onLoadFiles,
   onClearFiles,
 }: UseContainerManagementProps) {
+  const [containerName, setContainerName] = useState<string | null>(null);
+  const hasCheckedRef = useRef(false);
+  const lastWalletRef = useRef<string | null>(null);
+  const logToTerminalRef = useRef(logToTerminal);
+  
+  // Keep log function ref updated
+  useEffect(() => {
+    logToTerminalRef.current = logToTerminal;
+  }, [logToTerminal]);
+
   // Create Container
   const handleCreateContainer = useCallback(async () => {
     onContainerLoading(true);
@@ -32,13 +42,19 @@ export function useContainerManagement({
       const response = await fetch("/api/docker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create", userId }),
+        body: JSON.stringify({ action: "create", walletAddress }),
       });
 
       const data = await response.json();
 
       if (data.success) {
         logToTerminal(`✓ ${data.message}`, "log");
+        
+        // Store container name for LSP connection
+        if (data.containerName) {
+          setContainerName(data.containerName);
+          logToTerminal(`📦 Container: ${data.containerName}`, "info");
+        }
 
         // Log any setup output
         if (data.output) {
@@ -61,11 +77,11 @@ export function useContainerManagement({
     } finally {
       onContainerLoading(false);
     }
-  }, [userId, logToTerminal, onContainerLoading, onError, onTerminalOpen, onLoadFiles]);
+  }, [walletAddress, logToTerminal, onContainerLoading, onError, onTerminalOpen, onLoadFiles]);
 
   // Delete Container
   const handleDeleteContainer = useCallback(async () => {
-    if (!confirm(`Delete container for user ${userId}?`)) {
+    if (!confirm(`Delete container for wallet ${walletAddress}?`)) {
       return;
     }
 
@@ -78,13 +94,14 @@ export function useContainerManagement({
       const response = await fetch("/api/docker", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", userId }),
+        body: JSON.stringify({ action: "delete", walletAddress }),
       });
 
       const data = await response.json();
 
       if (data.success) {
         logToTerminal(`✓ ${data.message}`, "log");
+        setContainerName(null);
         onClearFiles();
       } else {
         logToTerminal(
@@ -99,11 +116,48 @@ export function useContainerManagement({
     } finally {
       onContainerLoading(false);
     }
-  }, [userId, logToTerminal, onContainerLoading, onError, onTerminalOpen, onClearFiles]);
+  }, [walletAddress, logToTerminal, onContainerLoading, onError, onTerminalOpen, onClearFiles]);
+
+  // Check container health and get container name on mount
+  const checkAndSetContainerName = useCallback(async () => {
+    if (!walletAddress || walletAddress === "not-connected") return;
+    
+    // Prevent duplicate checks for same wallet
+    if (hasCheckedRef.current && lastWalletRef.current === walletAddress) {
+      return;
+    }
+    
+    hasCheckedRef.current = true;
+    lastWalletRef.current = walletAddress;
+    
+    try {
+      const response = await fetch("/api/docker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "checkHealth", walletAddress }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.isHealthy) {
+        // Container is running, derive container name from wallet address
+        const prefix = walletAddress.slice(0, 10).toLowerCase();
+        const derivedContainerName = `soroban-${prefix}`;
+        setContainerName(derivedContainerName);
+        logToTerminalRef.current(`📦 Connected to container: ${derivedContainerName}`, "info");
+      }
+    } catch (error) {
+      console.error("Failed to check container health:", error);
+      // Reset check flag on error so it can retry
+      hasCheckedRef.current = false;
+    }
+  }, [walletAddress]); // Only depend on walletAddress
 
   return {
+    containerName,
     handleCreateContainer,
     handleDeleteContainer,
+    checkAndSetContainerName,
   };
 }
 
