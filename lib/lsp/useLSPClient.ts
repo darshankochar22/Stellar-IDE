@@ -4,13 +4,15 @@
  * Composes connection, document sync, and request hooks
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Diagnostic, InlayHint } from './types';
 import { handleDiagnostics } from './diagnostics';
 import { type CodeAction, type DocumentSymbol, type DocumentHighlight } from './requests';
 import { useLSPConnection } from './hooks/useLSPConnection';
 import { useLSPDocumentSync } from './hooks/useLSPDocumentSync';
 import { useLSPRequests } from './hooks/useLSPRequests';
+
+export type OnDiagnosticsUpdate = (uri: string, diagnostics: Diagnostic[]) => void;
 
 interface UseLSPClientReturn {
   isConnected: boolean;
@@ -35,16 +37,28 @@ interface UseLSPClientReturn {
 
 export function useLSPClient(
   containerId: string | undefined,
-  fileUri: string
+  fileUri: string,
+  onDiagnosticsUpdate?: OnDiagnosticsUpdate
 ): UseLSPClientReturn {
   const [diagnosticsCount, setDiagnosticsCount] = useState(0);
 
-  // Diagnostics handler
+  // Use ref for diagnostics update callback to avoid recreating connection
+  const onDiagnosticsUpdateRef = useRef(onDiagnosticsUpdate);
+  useEffect(() => {
+    onDiagnosticsUpdateRef.current = onDiagnosticsUpdate;
+  }, [onDiagnosticsUpdate]);
+
+  // Diagnostics handler - stable callback
   const handleDiagnosticsCallback = useCallback(
     (uri: string, diagnostics: unknown[]) => {
-      handleDiagnostics(uri, diagnostics as Diagnostic[], setDiagnosticsCount);
+      handleDiagnostics(
+        uri,
+        diagnostics as Diagnostic[],
+        setDiagnosticsCount,
+        onDiagnosticsUpdateRef.current
+      );
     },
-    []
+    [] // Empty dependencies - callback is stable
   );
 
   // Connection management

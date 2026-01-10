@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import Sidebar from "./Sidebar";
 import EditorPanel from "./EditorPanel";
 import TopBar from "./TopBar";
@@ -119,12 +119,17 @@ export default function Right({
   });
 
   // Tab Management hook
-  const { openFiles, addOpenFile, handleSelectTab, handleCloseTab } =
-    useTabManagement({
-      files,
-      onFileSelect: setOpenFile,
-      onOpenFilesChange: () => {}, // Will be updated inline
-    });
+  const {
+    openFiles,
+    addOpenFile,
+    handleSelectTab,
+    handleCloseTab,
+    findFileNode,
+  } = useTabManagement({
+    files,
+    onFileSelect: setOpenFile,
+    onOpenFilesChange: () => {}, // Will be updated inline
+  });
 
   // Editor State hook
   const { handleEditorChange } = useEditorState({
@@ -167,6 +172,29 @@ export default function Right({
     handleCreateFile,
     handleCreateFolder,
   });
+
+  // Handle opening file by path (for diagnostic clicks) - defined after handlers
+  const handleFileOpen = useCallback(
+    async (filePath: string) => {
+      // Check if file is already open
+      const isAlreadyOpen = openFiles.some((f) => f.path === filePath);
+      if (isAlreadyOpen) {
+        // Just select the tab
+        handleSelectTab(filePath);
+        return;
+      }
+
+      // Find file node in the file tree
+      const fileNode = findFileNode(filePath);
+      if (fileNode && fileNode.type === "file") {
+        // Open the file using handleFileClickWrapper
+        await handleFileClickWrapper(fileNode);
+      } else {
+        console.warn(`[Right] File not found in file tree: ${filePath}`);
+      }
+    },
+    [openFiles, handleSelectTab, findFileNode, handleFileClickWrapper]
+  );
 
   // Check for existing container when wallet connects
   useEffect(() => {
@@ -260,6 +288,7 @@ export default function Right({
           logs={logs}
           onFileSelect={handleSelectTab}
           onFileClose={handleCloseTab}
+          onFileOpen={handleFileOpen}
           onEditorChange={handleEditorChange}
           onEditorMount={handleEditorDidMount}
           onSave={handleSave}

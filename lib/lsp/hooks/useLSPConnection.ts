@@ -31,6 +31,12 @@ export function useLSPConnection({
   const [isInitialized, setIsInitialized] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const isInitializedRef = useRef(false);
+  const onDiagnosticsRef = useRef(onDiagnostics);
+  
+  // Update ref when callback changes (but don't trigger reconnection)
+  useEffect(() => {
+    onDiagnosticsRef.current = onDiagnostics;
+  }, [onDiagnostics]);
 
   // Main connection effect
   useEffect(() => {
@@ -81,9 +87,9 @@ export function useLSPConnection({
         }
 
         // Handle diagnostics
-        if (message.method === 'textDocument/publishDiagnostics' && onDiagnostics) {
+        if (message.method === 'textDocument/publishDiagnostics' && onDiagnosticsRef.current) {
           const { uri, diagnostics } = message.params as { uri: string; diagnostics: unknown[] };
-          onDiagnostics(uri, diagnostics);
+          onDiagnosticsRef.current(uri, diagnostics);
         }
       } catch (error) {
         console.error('[LSP Connection] Message parse error:', error);
@@ -112,7 +118,7 @@ export function useLSPConnection({
       isInitializedRef.current = false;
       setIsInitialized(false);
     };
-  }, [containerId, onDiagnostics]);
+  }, [containerId]); // Removed onDiagnostics from dependencies - use ref instead
 
   return {
     isConnected,

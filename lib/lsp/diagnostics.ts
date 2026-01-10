@@ -122,10 +122,20 @@ export function applyMarkersToEditor(
 export function handleDiagnostics(
   uri: string,
   diagnostics: Diagnostic[],
-  onDiagnosticsCount: (count: number) => void
+  onDiagnosticsCount?: (count: number) => void,
+  onDiagnosticsUpdate?: (uri: string, diagnostics: Diagnostic[]) => void
 ): void {
   console.log(`[LSP Diagnostics]  Received ${diagnostics.length} diagnostics for ${uri}`);
-  onDiagnosticsCount(diagnostics.length);
+  
+  // Update count if callback provided
+  if (onDiagnosticsCount) {
+    onDiagnosticsCount(diagnostics.length);
+  }
+
+  // Store all diagnostics if callback provided
+  if (onDiagnosticsUpdate) {
+    onDiagnosticsUpdate(uri, diagnostics);
+  }
 
   if (diagnostics.length === 0) {
     console.log('[LSP Diagnostics] No diagnostics to display');

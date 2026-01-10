@@ -13,6 +13,8 @@ interface BottomBarProps {
   lspConnected?: boolean;
   lspError?: string | null;
   diagnosticsCount?: number;
+  problemsCount?: number;
+  errorsCount?: number;
   cursorPosition?: { line: number; column: number };
 }
 
@@ -21,6 +23,8 @@ export default function BottomBar({
   lspConnected,
   lspError,
   diagnosticsCount = 0,
+  problemsCount = 0,
+  errorsCount = 0,
   cursorPosition = { line: 1, column: 1 },
 }: BottomBarProps) {
   return (
@@ -71,9 +75,13 @@ export default function BottomBar({
                 ? "LSP Error"
                 : "Connecting..."}
             </span>
-            {diagnosticsCount > 0 && (
-              <span className="text-orange-400" suppressHydrationWarning>
-                ({diagnosticsCount} issues)
+            {problemsCount > 0 && (
+              <span
+                className={errorsCount > 0 ? "text-red-400" : "text-yellow-400"}
+                suppressHydrationWarning
+              >
+                ({problemsCount}
+                {errorsCount > 0 && ` ${errorsCount} error${errorsCount > 1 ? "s" : ""}`})
               </span>
             )}
           </div>

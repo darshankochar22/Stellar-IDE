@@ -6,13 +6,18 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import Terminal from "../Terminal";
 import TabBar from "../TabBar";
 import BottomBar from "../BottomBar";
+import BottomPanel from "../BottomPanel";
 import MonacoEditorWrapper from "./MonacoEditor";
 import EmptyState from "./EmptyState";
 import { useLSPSync } from "./useLSPSync";
-import { useLSPClient } from "../../lib/useLSPClient";
+import {
+  useLSPClient,
+  type OnDiagnosticsUpdate,
+} from "../../lib/lsp/useLSPClient";
+import { useDiagnosticsStore } from "../../hooks/useDiagnosticsStore";
+import type { Diagnostic } from "../../lib/lsp/types";
 import type { EditorPanelProps, MonacoEditor, MonacoType } from "./types";
 
 export default function EditorPanel({
@@ -27,6 +32,7 @@ export default function EditorPanel({
   logs,
   onFileSelect,
   onFileClose,
+  onFileOpen,
   onEditorChange,
   onEditorMount,
   onTerminalClose,
@@ -37,6 +43,23 @@ export default function EditorPanel({
 
   // Cursor position state
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
+
+  // Diagnostics store
+  const diagnosticsStore = useDiagnosticsStore();
+  const diagnosticsStoreRef = useRef(diagnosticsStore);
+
+  // Keep ref in sync
+  useEffect(() => {
+    diagnosticsStoreRef.current = diagnosticsStore;
+  }, [diagnosticsStore]);
+
+  // Handle diagnostics update callback - stable reference using ref
+  const handleDiagnosticsUpdate = useCallback<OnDiagnosticsUpdate>(
+    (uri: string, diagnostics: Diagnostic[]) => {
+      diagnosticsStoreRef.current.addDiagnostics(uri, diagnostics);
+    },
+    [] // Empty deps - callback is stable
+  );
 
   // Build file URI for LSP
   const effectiveProjectName = projectName || "soroban-hello-world";
@@ -62,7 +85,7 @@ export default function EditorPanel({
     requestCodeAction,
     requestDocumentSymbols,
     requestDocumentHighlight,
-  } = useLSPClient(containerId, fileUri);
+  } = useLSPClient(containerId, fileUri, handleDiagnosticsUpdate);
 
   // Debug logging
   useEffect(() => {
@@ -83,6 +106,17 @@ export default function EditorPanel({
     openTextDocument,
     changeTextDocument,
   });
+
+  // Clear diagnostics when file closes
+  useEffect(() => {
+    if (!openFile && fileUri) {
+      // File was closed - clear diagnostics for that URI after a delay
+      const timer = setTimeout(() => {
+        diagnosticsStore.clearDiagnostics(fileUri);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [openFile, fileUri, diagnosticsStore]);
 
   // Get file content
   const getFileContent = (path: string): string => {
@@ -160,14 +194,52 @@ export default function EditorPanel({
           )}
         </div>
 
-        {/* Terminal */}
+        {/* Bottom Panel (Terminal + Problems) */}
         {terminalOpen && (
-          <Terminal
+          <BottomPanel
             isOpen={terminalOpen}
             onClose={onTerminalClose}
-            logs={logs}
             height={terminalHeight}
             onHeightChange={onTerminalHeightChange}
+            terminalLogs={logs}
+            diagnostics={diagnosticsStore.diagnostics}
+            onDiagnosticClick={async (uri, line, column) => {
+              // Extract file path from URI
+              const workspacePath = `/home/developer/workspace/${effectiveProjectName}/`;
+              const filePath = uri
+                .replace("file://", "")
+                .replace(workspacePath, "");
+
+              // Navigate to location (file opening is handled in ProblemsPanel)
+              if (editorInstanceRef.current) {
+                // Check if this is the currently open file, or wait a bit if file was just opened
+                const isCurrentFile = openFile?.path === filePath;
+
+                if (isCurrentFile) {
+                  // File is already open - navigate immediately
+                  editorInstanceRef.current.setPosition({
+                    lineNumber: line,
+                    column,
+                  });
+                  editorInstanceRef.current.revealLineInCenter(line);
+                  editorInstanceRef.current.focus();
+                } else {
+                  // File might be opening - wait a bit then navigate
+                  setTimeout(() => {
+                    if (editorInstanceRef.current) {
+                      editorInstanceRef.current.setPosition({
+                        lineNumber: line,
+                        column,
+                      });
+                      editorInstanceRef.current.revealLineInCenter(line);
+                      editorInstanceRef.current.focus();
+                    }
+                  }, 200);
+                }
+              }
+            }}
+            onFileOpen={onFileOpen}
+            projectName={projectName}
           />
         )}
       </div>
@@ -177,6 +249,8 @@ export default function EditorPanel({
         lspConnected={isConnected}
         lspError={connectionError}
         diagnosticsCount={diagnosticsCount}
+        problemsCount={diagnosticsStore.totalCount}
+        errorsCount={diagnosticsStore.errorCount}
         cursorPosition={cursorPosition}
       />
     </div>

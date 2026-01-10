@@ -3,7 +3,7 @@
  */
 
 // Main hook
-export { useLSPClient } from './useLSPClient';
+export { useLSPClient, type OnDiagnosticsUpdate } from './useLSPClient';
 
 // Types
 export type {

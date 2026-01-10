@@ -32,6 +32,7 @@ export interface EditorPanelProps {
   logs: LogMessage[];
   onFileSelect: (path: string) => void;
   onFileClose: (path: string) => void;
+  onFileOpen?: (filePath: string) => Promise<void>; // Open file that's not already open
   onEditorChange: (value: string | undefined) => void;
   onEditorMount: (editorInstance: MonacoEditor, monaco: MonacoType) => void;
   onSave: () => void;
