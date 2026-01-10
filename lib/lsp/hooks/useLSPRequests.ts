@@ -18,7 +18,9 @@ import {
   requestFormatting as sendFormattingRequest,
   requestCodeAction as sendCodeActionRequest,
   requestDocumentSymbols as sendDocumentSymbolsRequest,
+  requestDocumentHighlight as sendDocumentHighlightRequest,
   type DocumentSymbol,
+  type DocumentHighlight,
 } from '../requests';
 
 interface UseLSPRequestsProps {
@@ -38,6 +40,7 @@ interface UseLSPRequestsReturn {
   requestFormatting: (uri: string) => Promise<unknown[]>;
   requestCodeAction: (uri: string, range: { start: { line: number; character: number }; end: { line: number; character: number } }, context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }) => Promise<CodeAction[]>;
   requestDocumentSymbols: (uri: string) => Promise<DocumentSymbol[]>;
+  requestDocumentHighlight: (uri: string, position: { line: number; character: number }) => Promise<DocumentHighlight[]>;
 }
 
 /**
@@ -183,6 +186,18 @@ export function useLSPRequests({
     [wsRef, isInitialized]
   );
 
+  // Request document highlight
+  const requestDocumentHighlight = useCallback(
+    (uri: string, position: { line: number; character: number }): Promise<DocumentHighlight[]> => {
+      const ws = wsRef.current;
+      if (!ws || !isInitialized) {
+        return Promise.resolve([]);
+      }
+      return sendDocumentHighlightRequest(ws, uri, position);
+    },
+    [wsRef, isInitialized]
+  );
+
   return {
     requestInlayHints,
     requestHover,
@@ -195,5 +210,6 @@ export function useLSPRequests({
     requestFormatting,
     requestCodeAction,
     requestDocumentSymbols,
+    requestDocumentHighlight,
   };
 }

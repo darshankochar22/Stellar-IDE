@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { X, List } from "lucide-react";
+import { X } from "lucide-react";
 
 export type OpenFile = {
   path: string;
@@ -14,9 +14,6 @@ interface TabBarProps {
   activeFile: string | null;
   onSelectFile: (path: string) => void;
   onCloseFile: (path: string) => void;
-  onToggleOutline?: () => void;
-  outlineVisible?: boolean;
-  showOutlineButton?: boolean;
 }
 
 const TabBar: React.FC<TabBarProps> = ({
@@ -24,9 +21,6 @@ const TabBar: React.FC<TabBarProps> = ({
   activeFile,
   onSelectFile,
   onCloseFile,
-  onToggleOutline,
-  outlineVisible = false,
-  showOutlineButton = false,
 }) => {
   const handleCloseClick = (e: React.MouseEvent, path: string) => {
     e.stopPropagation();
@@ -76,23 +70,6 @@ const TabBar: React.FC<TabBarProps> = ({
           );
         })}
       </div>
-      {/* Outline Toggle Button */}
-      {showOutlineButton && onToggleOutline && (
-        <button
-          className={`
-            ml-auto mr-2 px-2 py-1.5 rounded transition-colors
-            ${
-              outlineVisible
-                ? "bg-[#252525] text-gray-300"
-                : "text-gray-500 hover:bg-[#252525] hover:text-gray-300"
-            }
-          `}
-          onClick={onToggleOutline}
-          title={outlineVisible ? "Hide Outline" : "Show Outline"}
-        >
-          <List size={16} />
-        </button>
-      )}
     </div>
   );
 };

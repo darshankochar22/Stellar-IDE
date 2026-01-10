@@ -218,3 +218,63 @@ export function requestDocumentSymbols(
     }));
   });
 }
+
+/**
+ * Document Highlight Types
+ */
+export interface DocumentHighlight {
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  kind?: number; // DocumentHighlightKind: Text = 1, Read = 2, Write = 3
+}
+
+/**
+ * Request document highlight (highlight all occurrences of symbol at cursor)
+ */
+export function requestDocumentHighlight(
+  ws: WebSocket,
+  uri: string,
+  position: { line: number; character: number },
+  timeout = 3000
+): Promise<DocumentHighlight[]> {
+  return new Promise((resolve) => {
+    if (ws.readyState !== WebSocket.OPEN) {
+      resolve([]);
+      return;
+    }
+
+    const requestId = createRequestId();
+
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.id === requestId) {
+          ws.removeEventListener('message', handleMessage);
+          const result = message.result;
+          resolve(Array.isArray(result) ? result : []);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    };
+
+    ws.addEventListener('message', handleMessage);
+
+    setTimeout(() => {
+      ws.removeEventListener('message', handleMessage);
+      resolve([]);
+    }, timeout);
+
+    ws.send(JSON.stringify({
+      jsonrpc: '2.0',
+      method: 'textDocument/documentHighlight',
+      params: {
+        textDocument: { uri },
+        position,
+      },
+      id: requestId,
+    }));
+  });
+}

@@ -77,6 +77,10 @@ export interface LSPFunctionsRef {
     context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }
   ) => Promise<unknown[]>;
   requestDocumentSymbols?: (uri: string) => Promise<DocumentSymbol[]>;
+  requestDocumentHighlight?: (
+    uri: string,
+    position: { line: number; character: number }
+  ) => Promise<unknown[]>;
 }
 
 export interface InlayHint {
@@ -101,5 +105,6 @@ declare global {
   interface Window {
     monacoInstance?: MonacoType;
     lspFunctions?: LSPFunctionsRef;
+    currentEditorInstance?: MonacoEditor;
   }
 }

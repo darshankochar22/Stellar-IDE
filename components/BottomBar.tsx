@@ -13,6 +13,7 @@ interface BottomBarProps {
   lspConnected?: boolean;
   lspError?: string | null;
   diagnosticsCount?: number;
+  cursorPosition?: { line: number; column: number };
 }
 
 export default function BottomBar({
@@ -20,6 +21,7 @@ export default function BottomBar({
   lspConnected,
   lspError,
   diagnosticsCount = 0,
+  cursorPosition = { line: 1, column: 1 },
 }: BottomBarProps) {
   return (
     <div className="h-8 bg-[#171717] border-t border-[#252525] flex items-center justify-between px-3 shrink-0">
@@ -76,7 +78,9 @@ export default function BottomBar({
             )}
           </div>
         )}
-        {openFile ? `Ln 1, Col 1` : ""}
+        {openFile
+          ? `Ln ${cursorPosition.line}, Col ${cursorPosition.column}`
+          : ""}
       </div>
     </div>
   );

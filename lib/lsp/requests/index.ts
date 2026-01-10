@@ -20,8 +20,9 @@ export {
   requestReferences,
   requestHover,
   requestDocumentSymbols,
+  requestDocumentHighlight,
 } from './navigation';
-export type { DocumentSymbol } from './navigation';
+export type { DocumentSymbol, DocumentHighlight } from './navigation';
 
 // Editing
 export {

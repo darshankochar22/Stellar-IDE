@@ -47,6 +47,8 @@ export {
   requestFormatting,
   requestCodeAction,
   requestDocumentSymbols,
+  requestDocumentHighlight,
   type CodeAction,
   type DocumentSymbol,
+  type DocumentHighlight,
 } from './requests';

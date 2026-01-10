@@ -23,6 +23,7 @@ interface OutlineViewProps {
   openFile: FileNode | null;
   requestDocumentSymbols: (uri: string) => Promise<DocumentSymbol[]>;
   onSymbolClick: (line: number, column: number) => void;
+  hideHeader?: boolean;
 }
 
 // Symbol kind icons mapping (LSP SymbolKind enum values)
@@ -54,6 +55,7 @@ export default function OutlineView({
   openFile,
   requestDocumentSymbols,
   onSymbolClick,
+  hideHeader = false,
 }: OutlineViewProps) {
   const [symbols, setSymbols] = useState<DocumentSymbol[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,14 +66,45 @@ export default function OutlineView({
   // Load symbols when file changes
   useEffect(() => {
     if (!fileUri || !openFile) {
+      console.log("[OutlineView] No fileUri or openFile", {
+        fileUri,
+        openFile,
+      });
       setSymbols([]);
       return;
     }
 
-    const loadSymbols = async () => {
+    const loadSymbols = async (retryCount = 0) => {
       setLoading(true);
+      console.log(
+        "[OutlineView] Loading symbols for URI:",
+        fileUri,
+        "Retry:",
+        retryCount
+      );
+
+      // Check if LSP functions are available
+      const lspFn = window.lspFunctions;
+      if (!lspFn?.requestDocumentSymbols && retryCount < 5) {
+        console.log(
+          "[OutlineView] LSP functions not available yet, retrying in 500ms..."
+        );
+        setLoading(false);
+        // Retry after a short delay
+        setTimeout(() => {
+          loadSymbols(retryCount + 1);
+        }, 500);
+        return;
+      }
+
       try {
         const result = await requestDocumentSymbols(fileUri);
+        console.log(
+          "[OutlineView] Received symbols:",
+          result,
+          "Count:",
+          result?.length
+        );
         setSymbols(result || []);
         // Auto-expand top-level symbols
         const topLevelIds = result?.map((_, index) => `symbol-${index}`) || [];
@@ -198,6 +231,20 @@ export default function OutlineView({
     );
   }
 
+  const content = (
+    <div className="py-2">
+      {symbols.map((symbol, index) => renderSymbol(symbol, 0, index))}
+    </div>
+  );
+
+  if (hideHeader) {
+    return (
+      <div className="h-full overflow-y-auto bg-[#171717] sidebar-scrollbar">
+        {content}
+      </div>
+    );
+  }
+
   return (
     <div className="h-full overflow-y-auto bg-[#171717] sidebar-scrollbar">
       <div className="px-3 py-2 border-b border-[#252525] shrink-0">
@@ -205,9 +252,7 @@ export default function OutlineView({
           Outline
         </h3>
       </div>
-      <div className="py-2">
-        {symbols.map((symbol, index) => renderSymbol(symbol, 0, index))}
-      </div>
+      {content}
     </div>
   );
 }

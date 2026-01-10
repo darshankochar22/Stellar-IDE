@@ -243,6 +243,7 @@ export default function Right({
             onCancelCreateItem={cancelCreateItem}
             onCreateFileRoot={handleCreateFileRoot}
             onCreateFolderRoot={handleCreateFolderRoot}
+            projectName={projectName}
           />
         )}
 

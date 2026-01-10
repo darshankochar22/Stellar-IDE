@@ -76,6 +76,11 @@ export function getEditorOptions(fontSize: number): editor.IStandaloneEditorCons
       fontFamily: "'JetBrains Mono', monospace",
       padding: true,
     },
+    // Multi-cursor support
+    multiCursorModifier: "ctrlCmd",
+    // Enable Alt+Click for multi-cursor on Mac/Linux
+    // Ctrl+Click on Windows
+    multiCursorMergeOverlapping: true,
   };
 }
 

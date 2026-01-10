@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import { Diagnostic, InlayHint } from './types';
 import { handleDiagnostics } from './diagnostics';
-import { type CodeAction, type DocumentSymbol } from './requests';
+import { type CodeAction, type DocumentSymbol, type DocumentHighlight } from './requests';
 import { useLSPConnection } from './hooks/useLSPConnection';
 import { useLSPDocumentSync } from './hooks/useLSPDocumentSync';
 import { useLSPRequests } from './hooks/useLSPRequests';
@@ -29,6 +29,7 @@ interface UseLSPClientReturn {
   requestFormatting: (uri: string) => Promise<unknown[]>;
   requestCodeAction: (uri: string, range: { start: { line: number; character: number }; end: { line: number; character: number } }, context: { diagnostics: Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; severity: number; code?: string | number }> }) => Promise<CodeAction[]>;
   requestDocumentSymbols: (uri: string) => Promise<DocumentSymbol[]>;
+  requestDocumentHighlight: (uri: string, position: { line: number; character: number }) => Promise<DocumentHighlight[]>;
   wsRef: React.RefObject<WebSocket | null>;
 }
 
@@ -77,6 +78,7 @@ export function useLSPClient(
     requestFormatting,
     requestCodeAction,
     requestDocumentSymbols,
+    requestDocumentHighlight,
   } = useLSPRequests({
     wsRef,
     isInitialized,
@@ -100,6 +102,7 @@ export function useLSPClient(
     requestFormatting,
     requestCodeAction,
     requestDocumentSymbols,
+    requestDocumentHighlight,
     wsRef,
   };
 }
